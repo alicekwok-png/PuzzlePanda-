@@ -8,6 +8,8 @@
   "home.startButton": "Start",
   "home.settingsAria": "Settings",
   "intro.skip": "Skip",
+  "video.soundOn": "Sound on",
+  "video.soundOff": "Mute",
   "nav.backHome": "Back to home",
   "nav.backToThemes": "Back to themes",
   "nav.backToLevelSelect": "Back to level select",

@@ -8,6 +8,8 @@
   "home.startButton": "开始游戏",
   "home.settingsAria": "设置",
   "intro.skip": "跳过",
+  "video.soundOn": "开启声音",
+  "video.soundOff": "关闭声音",
   "nav.backHome": "返回首页",
   "nav.backToThemes": "返回主题选择",
   "nav.backToLevelSelect": "返回关卡选择",

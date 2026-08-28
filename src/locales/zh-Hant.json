@@ -37,6 +37,8 @@
   "home.startButton": "開始遊戲",
   "home.settingsAria": "設定",
   "intro.skip": "跳過",
+  "video.soundOn": "開啟聲音",
+  "video.soundOff": "關閉聲音",
   "nav.backHome": "返回首頁",
   "nav.backToThemes": "返回主題選擇",
   "nav.backToLevelSelect": "返回關卡選擇",

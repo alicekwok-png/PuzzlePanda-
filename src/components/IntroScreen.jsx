@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useVideoSound } from '../hooks/useVideoSound';
 import { useT } from '../i18n/context';
 import { feedback } from '../services/feedback';
 
@@ -7,33 +8,33 @@ import { feedback } from '../services/feedback';
    --------------------------------------------------------------------------
    素材：design/intro-animation/intro-final.mp4（原檔是 HEVC/H.265）。
    ⚠️ 已轉成 H.264 放在 public/intro/intro.mp4 —— HEVC 在 Chrome 與 Android
-   WebView 大多播不出來，只有 Safari/iOS 穩定支援。這跟音效那邊
-   .ogg → .mp3 是同一類問題。
+   WebView 大多播不出來，只有 Safari/iOS 穩定支援。
 
-   行為（規格未定，以下是預設值，要改很容易）：
+   聲音：見 hooks/useVideoSound.js。手機一定會靜音起播（平台規則），
+   所以右下角給一個喇叭鍵讓用戶自己開聲。
+
+   行為（規格未定，以下是預設值）：
    - 每次冷啟動播一次，播完自動進首頁
-   - 點畫面任何地方即跳過
+   - 點畫面任何地方即跳過；喇叭鍵與跳過鍵不會觸發跳過
    - 系統開了「減少動態效果」就整段跳過
-   - 影片載入失敗、或根本播不動，一律直接進首頁 —— 開場動畫絕對不能
-     把玩家卡在門外
+   - 12 秒保險計時器；播不動一律直接進首頁 —— 開場動畫絕不能把玩家卡在門外
    ========================================================================== */
 
-const FALLBACK_MS = 12000; // 比影片長度（10 秒）多一點的保險，避免 ended 事件沒來
+const FALLBACK_MS = 12000;
 
 export default function IntroScreen({ onFinish }) {
   const t = useT();
-  const videoRef = useRef(null);
   const finishedRef = useRef(false);
-  const [muted, setMuted] = useState(false);
+
+  const finish = useCallback(() => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    onFinish();
+  }, [onFinish]);
+
+  const { videoRef, muted, toggleSound } = useVideoSound({ onUnplayable: finish });
 
   useEffect(() => {
-    const finish = () => {
-      if (finishedRef.current) return;
-      finishedRef.current = true;
-      onFinish();
-    };
-
-    // 使用者要求減少動態效果就不播
     try {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         finish();
@@ -42,31 +43,13 @@ export default function IntroScreen({ onFinish }) {
     } catch {
       /* matchMedia 不可用就照常播 */
     }
-
-    const video = videoRef.current;
-    if (!video) {
-      finish();
-      return;
-    }
-
-    // 先試帶聲播；被自動播放政策擋下就靜音再試一次。
-    // 打包成 app 之後 WebView 通常允許帶聲，瀏覽器則會走靜音那條路。
-    video.play().catch(() => {
-      setMuted(true);
-      video.muted = true;
-      video.play().catch(finish); // 連靜音都播不動就直接進首頁
-    });
-
     const timer = setTimeout(finish, FALLBACK_MS);
     return () => clearTimeout(timer);
-  }, [onFinish]);
+  }, [finish]);
 
   function skip() {
     feedback.tap();
-    if (!finishedRef.current) {
-      finishedRef.current = true;
-      onFinish();
-    }
+    finish();
   }
 
   return (
@@ -76,13 +59,26 @@ export default function IntroScreen({ onFinish }) {
         className="intro-video"
         src="/intro/intro.mp4"
         poster="/intro/intro-poster.jpg"
-        muted={muted}
         playsInline
         preload="auto"
-        onEnded={skip}
-        onError={skip}
+        onEnded={finish}
+        onError={finish}
       />
-      <button type="button" className="intro-skip" onClick={skip}>
+
+      {/* stopPropagation：撳喇叭鍵不應該連帶跳過整段動畫 */}
+      <button
+        type="button"
+        className="video-sound-btn"
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleSound();
+        }}
+        aria-label={muted ? t('video.soundOn') : t('video.soundOff')}
+      >
+        {muted ? '🔇' : '🔊'}
+      </button>
+
+      <button type="button" className="intro-skip" onClick={(e) => { e.stopPropagation(); skip(); }}>
         {t('intro.skip')}
       </button>
     </div>

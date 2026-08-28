@@ -1022,3 +1022,45 @@ const justCompletedChapter = !wasCompleted && completedAfter === 5;
 - 持久貼紙相簿／收藏畫面 —— 目前貼紙只在結算與過渡那一刻出現，之後無處回看
 - 貼紙分享／匯出
 - 過渡片用 rewarded ad 補充
+
+---
+
+## 影片聲音：手機開場動畫冇聲（2026-08-29）
+
+### 原因不是 bug，是平台硬性規則
+
+**手機瀏覽器一律禁止「未經用戶操作就自動播放有聲影片」**（Chrome、Safari 都一樣）。
+`IntroScreen` 本來就有 fallback：先試帶聲播 → 被擋 → 轉靜音重播。所以手機上一定靜音，
+繞不過去。
+
+### 修法：給用戶一個開聲鍵
+
+新增 `src/hooks/useVideoSound.js`，開場動畫與章節過渡片共用：
+
+1. 先試帶聲播（桌面、或用戶之前已跟本網域互動過就會成功）
+2. 被擋就靜音重試 —— 保證影片一定播得出
+3. 靜音時左下角顯示 🔇 鍵，**用戶撳一下即有聲** —— 撳鍵本身就是「用戶操作」，政策允許在那一刻解除靜音
+
+喇叭鍵放左下角、跳過鍵放右下角，兩者都 `stopPropagation`，撳開聲不會誤觸跳過整段動畫。
+
+### 順帶修好：章節過渡片本來永遠靜音
+
+`ChapterTransition` 原本把 `muted` 寫死，等於那 10 條片的 AAC 音軌**從來沒有人聽過**。
+已改用同一個 hook。玩家走到章節過渡那一刻必然已經點過畫面很多次，瀏覽器多數會直接
+允許有聲播放。
+
+### 驗證（用 Playwright 在頁面載入前注入「手機式」自動播放限制）
+
+| 情況 | 結果 |
+|---|---|
+| 有聲被擋（＝手機實況） | ✅ 自動轉靜音並繼續播，喇叭鍵顯示 🔇 |
+| 用戶撳喇叭鍵 | ✅ 解除靜音、繼續播、圖示轉 🔊、**不會誤觸跳過** |
+| 影片完全播不動 | ✅ 自動進首頁，不會把玩家卡住 |
+| 桌面 | ✅ 直接帶聲播放 |
+
+### 原生 app 可以直接有聲
+
+打包成 Capacitor app 之後，WebView 可以設定成不需要用戶操作就播有聲，那時第 1 步會直接
+成功、開場動畫一開就有聲。這需要 IT 在 native 專案做一個小改動（iOS 的
+`WKWebViewConfiguration.mediaTypesRequiringUserActionForPlayback`、Android WebView 的
+`setMediaPlaybackRequiresUserGesture(false)`），加了 platform 之後才做得到，這台機器上驗證不了。
