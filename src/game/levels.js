@@ -30,8 +30,8 @@ export const CHAPTERS = [
 const PEEKS_PER_LEVEL = 3;
 
 function tierConfig(levelNumber) {
-  if (levelNumber === 1) return { size: 4, hints: 3 };
-  if (levelNumber <= 3) return { size: 5, hints: 3 };
+  if (levelNumber <= 2) return { size: 4, hints: 3 };
+  if (levelNumber === 3) return { size: 5, hints: 3 };
   if (levelNumber <= 6) return { size: 6, hints: 2 };
   if (levelNumber <= 12) return { size: 7, hints: 2 };
   /* 第 9 章「星空」（第 41–45 關）整章下調：7×7/1 提示 → 6×6/2 提示。
