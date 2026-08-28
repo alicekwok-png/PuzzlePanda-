@@ -1,0 +1,108 @@
+{
+  "_note": "3語言UI文字草稿，畀Claude Code直接攞嚟入落佢揀嘅i18n架構,唔使自己再諗翻譯。zh-Hant係書面語(唔係粵語口語)。語言選擇畫面入面嘅語言名(繁體中文/简体中文/English)按UI慣例應該永遠用自己語言顯示,唔會跟住當前語言變。",
+
+  "home.title": {
+    "zh-Hant": "PuzzlePanda",
+    "zh-Hans": "PuzzlePanda",
+    "en": "PuzzlePanda"
+  },
+  "home.subtitle": {
+    "zh-Hant": "拖曳交換位置，拼出完整圖片",
+    "zh-Hans": "拖动交换位置，拼出完整图片",
+    "en": "Drag and swap tiles to complete the picture"
+  },
+  "home.startButton": {
+    "zh-Hant": "開始遊戲",
+    "zh-Hans": "开始游戏",
+    "en": "Start"
+  },
+
+  "nav.back": {
+    "zh-Hant": "返回",
+    "zh-Hans": "返回",
+    "en": "Back"
+  },
+
+  "levelSelect.chooseTheme": {
+    "zh-Hant": "選擇主題",
+    "zh-Hans": "选择主题",
+    "en": "Choose a Theme"
+  },
+
+  "game.undo": {
+    "zh-Hant": "復原",
+    "zh-Hans": "撤销",
+    "en": "Undo"
+  },
+  "game.hint": {
+    "zh-Hant": "提示",
+    "zh-Hans": "提示",
+    "en": "Hint"
+  },
+  "game.movesLabel": {
+    "zh-Hant": "交換次數：{{moves}}",
+    "zh-Hans": "交换次数：{{moves}}",
+    "en": "Moves: {{moves}}"
+  },
+  "game.levelName": {
+    "zh-Hant": "第 {{n}} 關 · {{chapterName}}",
+    "zh-Hans": "第 {{n}} 关 · {{chapterName}}",
+    "en": "Level {{n}} · {{chapterName}}"
+  },
+
+  "win.title": {
+    "zh-Hant": "🎉 過關！",
+    "zh-Hans": "🎉 过关！",
+    "en": "🎉 Level Complete!"
+  },
+  "win.nextLevel": {
+    "zh-Hant": "下一關 →",
+    "zh-Hans": "下一关 →",
+    "en": "Next Level →"
+  },
+  "win.playAgain": {
+    "zh-Hant": "再玩一次",
+    "zh-Hans": "再玩一次",
+    "en": "Play Again"
+  },
+  "win.backToLevels": {
+    "zh-Hant": "返回關卡",
+    "zh-Hans": "返回关卡",
+    "en": "Back to Levels"
+  },
+
+  "settings.title": {
+    "zh-Hant": "設定",
+    "zh-Hans": "设置",
+    "en": "Settings"
+  },
+  "settings.language": {
+    "zh-Hant": "語言",
+    "zh-Hans": "语言",
+    "en": "Language"
+  },
+  "settings.languageOption.zhHant": {
+    "note": "呢3個選項名永遠顯示自己語言，唔跟隨當前UI語言",
+    "value": "繁體中文"
+  },
+  "settings.languageOption.zhHans": {
+    "value": "简体中文"
+  },
+  "settings.languageOption.en": {
+    "value": "English"
+  },
+
+  "chapters": {
+    "_note": "而家levels.js嘅CHAPTERS.name係中英夾雜一個string(例如「風景 Nature Landscape」)，建議拆做per-locale獨立field，下面淨係中文部分嘅名，英文部分直接沿用現有嘅英文（本身已經係英文，3語言都可以共用或按需微調）",
+    "ch01": { "zh-Hant": "風景", "zh-Hans": "风景", "en": "Nature Landscape" },
+    "ch02": { "zh-Hant": "熊貓", "zh-Hans": "熊猫", "en": "Panda" },
+    "ch03": { "zh-Hant": "貓咪", "zh-Hans": "猫咪", "en": "Cats" },
+    "ch04": { "zh-Hant": "花卉", "zh-Hans": "花卉", "en": "Floral" },
+    "ch05": { "zh-Hant": "甜品", "zh-Hans": "甜品", "en": "Dessert" },
+    "ch06": { "zh-Hant": "藝術", "zh-Hans": "艺术", "en": "Abstract Art" },
+    "ch07": { "zh-Hant": "海洋", "zh-Hans": "海洋", "en": "Ocean" },
+    "ch08": { "zh-Hant": "世界名勝", "zh-Hans": "世界名胜", "en": "World Landmarks" },
+    "ch09": { "zh-Hant": "星空", "zh-Hans": "星空", "en": "Starry Sky" },
+    "ch10": { "zh-Hant": "城市夜景", "zh-Hans": "城市夜景", "en": "City Night" }
+  }
+}

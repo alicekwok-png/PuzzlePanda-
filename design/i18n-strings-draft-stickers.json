@@ -1,0 +1,174 @@
+{
+  "_note": "3語言UI文字草稿，畀Claude Code直接攞嚟入落佢揀嘅i18n架構,唔使自己再諗翻譯。zh-Hant係書面語(唔係粵語口語)。語言選擇畫面入面嘅語言名(繁體中文/简体中文/English)按UI慣例應該永遠用自己語言顯示,唔會跟住當前語言變。",
+
+  "home.title": {
+    "zh-Hant": "PuzzlePanda",
+    "zh-Hans": "PuzzlePanda",
+    "en": "PuzzlePanda"
+  },
+  "home.subtitle": {
+    "zh-Hant": "拖曳交換位置，拼出完整圖片",
+    "zh-Hans": "拖动交换位置，拼出完整图片",
+    "en": "Drag and swap tiles to complete the picture"
+  },
+  "home.startButton": {
+    "zh-Hant": "開始遊戲",
+    "zh-Hans": "开始游戏",
+    "en": "Start"
+  },
+
+  "nav.back": {
+    "zh-Hant": "返回",
+    "zh-Hans": "返回",
+    "en": "Back"
+  },
+
+  "levelSelect.chooseTheme": {
+    "zh-Hant": "選擇主題",
+    "zh-Hans": "选择主题",
+    "en": "Choose a Theme"
+  },
+
+  "game.undo": {
+    "zh-Hant": "復原",
+    "zh-Hans": "撤销",
+    "en": "Undo"
+  },
+  "game.hint": {
+    "zh-Hant": "提示",
+    "zh-Hans": "提示",
+    "en": "Hint"
+  },
+  "game.movesLabel": {
+    "zh-Hant": "交換次數：{{moves}}",
+    "zh-Hans": "交换次数：{{moves}}",
+    "en": "Moves: {{moves}}"
+  },
+  "game.levelName": {
+    "zh-Hant": "第 {{n}} 關 · {{chapterName}}",
+    "zh-Hans": "第 {{n}} 关 · {{chapterName}}",
+    "en": "Level {{n}} · {{chapterName}}"
+  },
+
+  "win.title": {
+    "zh-Hant": "🎉 過關！",
+    "zh-Hans": "🎉 过关！",
+    "en": "🎉 Level Complete!"
+  },
+  "win.nextLevel": {
+    "zh-Hant": "下一關 →",
+    "zh-Hans": "下一关 →",
+    "en": "Next Level →"
+  },
+  "win.playAgain": {
+    "zh-Hant": "再玩一次",
+    "zh-Hans": "再玩一次",
+    "en": "Play Again"
+  },
+  "win.backToLevels": {
+    "zh-Hant": "返回關卡",
+    "zh-Hans": "返回关卡",
+    "en": "Back to Levels"
+  },
+
+  "settings.title": {
+    "zh-Hant": "設定",
+    "zh-Hans": "设置",
+    "en": "Settings"
+  },
+  "settings.language": {
+    "zh-Hant": "語言",
+    "zh-Hans": "语言",
+    "en": "Language"
+  },
+  "settings.languageOption.zhHant": {
+    "note": "呢3個選項名永遠顯示自己語言，唔跟隨當前UI語言",
+    "value": "繁體中文"
+  },
+  "settings.languageOption.zhHans": {
+    "value": "简体中文"
+  },
+  "settings.languageOption.en": {
+    "value": "English"
+  },
+
+  "chapters": {
+    "_note": "而家levels.js嘅CHAPTERS.name係中英夾雜一個string(例如「風景 Nature Landscape」)，建議拆做per-locale獨立field，下面淨係中文部分嘅名，英文部分直接沿用現有嘅英文（本身已經係英文，3語言都可以共用或按需微調）",
+    "ch01": { "zh-Hant": "風景", "zh-Hans": "风景", "en": "Nature Landscape" },
+    "ch02": { "zh-Hant": "熊貓", "zh-Hans": "熊猫", "en": "Panda" },
+    "ch03": { "zh-Hant": "貓咪", "zh-Hans": "猫咪", "en": "Cats" },
+    "ch04": { "zh-Hant": "花卉", "zh-Hans": "花卉", "en": "Floral" },
+    "ch05": { "zh-Hant": "甜品", "zh-Hans": "甜品", "en": "Dessert" },
+    "ch06": { "zh-Hant": "藝術", "zh-Hans": "艺术", "en": "Abstract Art" },
+    "ch07": { "zh-Hant": "海洋", "zh-Hans": "海洋", "en": "Ocean" },
+    "ch08": { "zh-Hant": "世界名勝", "zh-Hans": "世界名胜", "en": "World Landmarks" },
+    "ch09": { "zh-Hant": "星空", "zh-Hans": "星空", "en": "Starry Sky" },
+    "ch10": { "zh-Hant": "城市夜景", "zh-Hans": "城市夜景", "en": "City Night" }
+  },
+
+  "win.stickerEarned": {
+    "zh-Hant": "獲得新貼紙",
+    "zh-Hans": "获得新贴纸",
+    "en": "New Sticker Earned"
+  },
+
+  "chapterTransition.continueButton": {
+    "zh-Hant": "繼續",
+    "zh-Hans": "继续",
+    "en": "Continue"
+  },
+
+  "chapterTransition": {
+    "_note": "10句chapter完成過渡caption，narrator口吻，熊貓唔講嘢。ch10係全遊戲finale文案，唔係『去下一個chapter』嗰種。詳見design/sticker-collection-spec.md。",
+    "ch01": {
+      "zh-Hant": "五段山林足跡都已收集，下一站，回到熊貓的老家。",
+      "zh-Hans": "五段山林足迹都已收集，下一站，回到熊猫的老家。",
+      "en": "All five trail memories collected — next stop, home in the bamboo grove."
+    },
+    "ch02": {
+      "zh-Hant": "竹林裡的溫暖時光留住了，接下來要去見見貓咪鄰居。",
+      "zh-Hans": "竹林里的温暖时光留住了，接下来要去见见猫咪邻居。",
+      "en": "The warm bamboo-grove moments are tucked away — time to meet the neighborhood cats."
+    },
+    "ch03": {
+      "zh-Hant": "毛線球和貓耳都收藏好了，是時候到花田走走。",
+      "zh-Hans": "毛线球和猫耳都收藏好了，是时候到花田走走。",
+      "en": "Yarn balls and cat ears, all collected — time for a walk through the flower fields."
+    },
+    "ch04": {
+      "zh-Hant": "花冠戴好了，甜點店的香氣正飄過來。",
+      "zh-Hans": "花冠戴好了，甜品店的香气正飘过来。",
+      "en": "Flower crown on — the bakery down the road smells amazing."
+    },
+    "ch05": {
+      "zh-Hant": "蛋糕吃飽了，拿起畫筆，去畫一片新天地。",
+      "zh-Hans": "蛋糕吃饱了，拿起画笔，去画一片新天地。",
+      "en": "Cake finished — pick up a paintbrush and paint a whole new world."
+    },
+    "ch06": {
+      "zh-Hant": "調色盤收好了，大海正在遠方閃閃發光。",
+      "zh-Hans": "调色盘收好了，大海正在远方闪闪发光。",
+      "en": "Palette packed away — the ocean is sparkling in the distance."
+    },
+    "ch07": {
+      "zh-Hant": "潛水裝備脫下來，換上背包，準備環遊世界名勝。",
+      "zh-Hans": "潜水装备脱下来，换上背包，准备环游世界名胜。",
+      "en": "Diving gear off, backpack on — time to see the world's landmarks."
+    },
+    "ch08": {
+      "zh-Hant": "地圖收起來了，夜空中的星星正在呼喚。",
+      "zh-Hans": "地图收起来了，夜空中的星星正在呼唤。",
+      "en": "Map folded up — the stars in the night sky are calling."
+    },
+    "ch09": {
+      "zh-Hant": "星星摘下來了，城市的霓虹燈正在發亮。",
+      "zh-Hans": "星星摘下来了，城市的霓虹灯正在发亮。",
+      "en": "Stars collected — the city lights are starting to glow."
+    },
+    "ch10": {
+      "zh-Hant": "全部10段旅程都完成了！熊貓的相簿集齊50張回憶，謝謝一路同行。",
+      "zh-Hans": "全部10段旅程都完成了！熊猫的相册集齐50张回忆，谢谢一路同行。",
+      "en": "All 10 journeys complete! The panda's album now holds 50 memories. Thanks for coming along."
+    }
+  }
+}

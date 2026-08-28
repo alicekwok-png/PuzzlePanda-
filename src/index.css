@@ -1,0 +1,1242 @@
+/* ==========================================================================
+   拼圖接龍 JigsawCard Solitaire — 視覺系統
+   --------------------------------------------------------------------------
+   設計立場：「相框與裱褙」
+   6 套主題相色調差異極大（粉紅花卉 / 藍金抽象 / 橘紅熊貓…），所以介面本身
+   刻意去彩度：暖中性深底 + 裱框金作唯一點綴。每一關的顏色由該關照片自己
+   暈染出來（.ambient），介面永遠不跟照片搶。
+
+   本 App 為單一深色主題（照片在深底上最突出）—— 這是決定，不是疏漏，因此
+   不做 prefers-color-scheme 切換，但所有顏色都明確指定，不繼承宿主環境。
+
+   字體：刻意使用系統 CJK 字棧，不引入 Google Fonts。此 App 會用 Capacitor
+   打包離線上架，外部字體會造成首屏無字或字體閃爍。層次改由字級、字重、
+   字距建立。
+   ========================================================================== */
+
+:root {
+  /* 底層 —— 暖調近黑，不用一般手遊的藍紫黑 */
+  --ink: #12100e;
+  --mat: #1d1a17;          /* 裱褙板 */
+  --mat-2: #2a2622;        /* 抬升面 */
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+
+  /* 文字 —— 暖紙白，非純白 */
+  --text: #f5f1ea;
+  --dim: #a49b8e;
+  --faint: #6f675d;
+
+  /* 點綴 —— 裱框金。唯一彩色，只用於進度與主要行動 */
+  --gild: #d9a94e;
+  --gild-soft: rgba(217, 169, 78, 0.16);
+
+  /* 語意色，與點綴色分離 */
+  --lock: #6fd3a8;         /* 已歸位 */
+  --lock-soft: rgba(111, 211, 168, 0.18);
+
+  /* 安全區 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* 廣告橫幅保留高度 —— 由 AdSlot 撐開，避免版面位移 (CLS) */
+  --ad-banner-h: 56px;
+
+  /* 棋盤長寬比。參考 App 實測為 384x615 = 0.6244，即 5:8。
+     主題相請以同一比例輸出（例如 1000x1600 / 800x1280）。
+     要改回正方只需把這裡改成 1 / 1，版面會自動跟著算。 */
+  --board-ratio: 5 / 8;
+  /* 棋盤以外的固定高度（頂欄 + 進度 + 工具列 + 廣告位），用來反推棋盤最大寬度 */
+  --chrome-h: 232px;
+
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+
+  font: 16px/1.45 'PingFang TC', 'PingFang HK', 'Noto Sans CJK TC',
+    'Microsoft JhengHei', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--ink);
+  overscroll-behavior: none;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--gild);
+  outline-offset: 2px;
+}
+
+/* ---------- 畫面外殼 ---------- */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  padding-top: var(--safe-top);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  background: var(--ink);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* 環境光：由該關照片模糊放大而成，介面色調因此自動跟每一關和諧 */
+.ambient {
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  background-image: var(--level-bg);
+  background-size: cover;
+  background-position: center;
+  filter: blur(64px) saturate(1.5) brightness(0.42);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.ambient::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, transparent 20%, rgba(18, 16, 14, 0.85) 78%);
+}
+
+/* ---------- 開場動畫 ---------- */
+.intro-screen {
+  padding: 0;
+  background: #0d1220; /* 影片首尾幀的深藍底，避免載入瞬間閃黑 */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.intro-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.intro-skip {
+  position: absolute;
+  right: calc(var(--safe-right) + 16px);
+  bottom: calc(var(--safe-bottom) + 28px);
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  border-radius: 999px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(8px);
+}
+
+/* ---------- 首頁 ---------- */
+.home-logo {
+  width: clamp(96px, 30vw, 132px);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 24%;
+  display: block;
+  margin: 0 auto 18px;
+  box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.8);
+}
+
+.home-screen {
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  padding: 24px;
+  text-align: center;
+}
+
+/* 遊戲只有英文名 PuzzlePanda，三種語言都一樣，所以不再需要
+   中文主標 + 拉丁副標的雙層處理。 */
+.home-hero h1 {
+  font-size: clamp(32px, 10vw, 44px);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  margin: 0 0 14px;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.home-settings {
+  position: absolute;
+  top: calc(var(--safe-top) + 14px);
+  right: calc(var(--safe-right) + 16px);
+  z-index: 2;
+}
+
+.home-subtitle {
+  color: var(--dim);
+  font-size: 15px;
+  margin: 0 auto;
+  max-width: 26ch;
+}
+
+/* ---------- 開發者列（只在 dev build 出現）----------
+   刻意做成一望而知是內部工具的樣子（虛線框、等寬字、低彩度），
+   免得被誤認成產品 UI 而進了設計稿。 */
+.dev-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 10px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-sm);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.dev-bar-tag {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--ink);
+  background: var(--dim);
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+.dev-btn {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 7px 11px;
+}
+
+.dev-btn.is-on {
+  color: var(--lock);
+  border-color: var(--lock);
+  background: var(--lock-soft);
+}
+
+/* ---------- 按鈕 ---------- */
+.primary-btn {
+  background: linear-gradient(180deg, #eec26a, var(--gild));
+  color: #2a1e06;
+  border: none;
+  border-radius: 999px;
+  padding: 15px 34px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 10px 28px -8px rgba(217, 169, 78, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+}
+
+.primary-btn:active { transform: translateY(1px) scale(0.985); }
+
+.primary-btn.big {
+  padding: 18px 52px;
+  font-size: 18px;
+}
+
+.primary-btn:disabled {
+  opacity: 0.4;
+  box-shadow: none;
+}
+
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 13px 26px;
+  font-size: 15px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  transition: background 0.15s ease;
+}
+
+.secondary-btn:active { background: rgba(255, 255, 255, 0.12); }
+
+/* ---------- 頂欄 ---------- */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 6px;
+  gap: 10px;
+  flex: none;
+}
+
+.level-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.level-title .level-kicker {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gild);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.top-bar-actions { display: flex; gap: 8px; }
+.top-bar-spacer { width: 42px; flex: none; }
+
+/* ---------- 工具鍵：「輕微 3D」 ----------
+   規格：design/toolbar-icons/style-spec.md（已用 mockup 與 Alice 確認）。
+   橘色漸層圓形 + 頂部玻璃高光 + 浮起外陰影，白色線性 icon 置中。
+
+   ⚠️ 規格原文引用 `--accent`(#ff7a59) 與 `--bg`(#0f1220)，這兩個 token 在
+   改版時已經移除。漸層色值照規格寫死，邊框則改用現行的 `--ink`，否則
+   `var(--bg)` 會解析失敗、badge 邊框整個不見。 */
+.icon-btn {
+  background: linear-gradient(180deg, #ffb38f 0%, #e85f3d 100%);
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 17px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex: none;
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.35),
+    inset 0 2px 3px rgba(255, 255, 255, 0.45),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.12s ease, filter 0.15s ease;
+}
+
+/* icon 約為按鈕直徑的一半（22 / 44） */
+.icon-btn img {
+  width: 22px;
+  height: 22px;
+  display: block;
+  pointer-events: none;
+}
+
+.icon-btn:active { transform: scale(0.92); filter: brightness(0.94); }
+.icon-btn:disabled { opacity: 0.35; }
+
+/* 剩餘次數氣泡：只有提示與睇圖有，返回與復原沒有 */
+.icon-btn-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #4cd964;
+  border: 1.5px solid var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* ---------- 進度 ---------- */
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 20px 12px;
+  flex: none;
+}
+
+.progress-bar-track {
+  flex: 1;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #b8863a, var(--gild));
+  border-radius: 999px;
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.progress-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  margin: 0;
+  min-width: 7ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-label b { color: var(--text); font-weight: 700; }
+
+/* ---------- 棋盤區 ---------- */
+/* 直向：棋盤在上、工具列在下。橫向時下面的 media query 會改成左右排列。 */
+.game-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.board-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  min-height: 0;
+}
+
+/* 裱褙板：讓拼圖像一張被裝裱的照片，而不是直接貼在背景上 */
+.board-mat {
+  width: 100%;
+  /* 棋盤是高度受限的：可用高度 x 長寬比 = 最大寬度。
+     這樣任何螢幕都會自動塞好，不用逐台機調。 */
+  max-width: min(100%, calc((100svh - var(--chrome-h)) * 0.625));
+  padding: 5px;
+  border-radius: var(--r-md);
+  background: linear-gradient(180deg, var(--mat-2), var(--mat));
+  border: 1px solid var(--line);
+  box-shadow:
+    0 28px 64px -16px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.board {
+  width: 100%;
+  aspect-ratio: var(--board-ratio);
+  display: grid;
+  gap: 0;                 /* 間隙由每塊自己 scale 出來，鎖定後才無縫併合 */
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a0908;
+  touch-action: none;
+}
+
+/* ---------- 拼圖塊 ---------- */
+/* 每塊都填滿自己那一格。縫隙不是靠縮細做出來，而是靠「未接合的邊才畫線」
+   （見 PuzzlePiece.jsx 的 inline box-shadow）。接合了的邊完全不畫，兩塊
+   就無縫黏成一片 —— 這就是玩家看到的「黐埋咗」。 */
+.piece {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background-repeat: no-repeat;
+  touch-action: none;
+  cursor: grab;
+  z-index: 1;
+  transition: box-shadow 0.25s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 歸位：收邊、去影、無縫併入照片 —— 整張圖逐步「癒合」 */
+/* 絕對歸位：邊框顏色由 PuzzlePiece 改成玉綠，這裡只保留游標語意 ——
+   歸位只是「已經擺對位」，不是鎖死，玩家隨時可以再把它拖走。 */
+.piece.is-placed {
+  cursor: grab;
+}
+
+/* 剛接合的一次性玉色閃光 */
+.piece.is-just-bonded::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 2px var(--lock), inset 0 0 18px var(--lock-soft);
+  animation: settle 0.72s ease-out forwards;
+  pointer-events: none;
+}
+
+/* 接合瞬間的閃亮 —— 每次砌啱都有特效，不是只有靜態變化 */
+.piece.is-just-bonded::before {
+  content: '✨';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(16px, 5vw, 28px);
+  z-index: 4;
+  pointer-events: none;
+  animation: sparkle 0.8s ease-out forwards;
+}
+
+@keyframes sparkle {
+  0%   { opacity: 0; transform: scale(0.4) rotate(-14deg); }
+  35%  { opacity: 1; transform: scale(1.15) rotate(0deg); }
+  100% { opacity: 0; transform: scale(1.4) rotate(10deg); }
+}
+
+@keyframes settle {
+  0%   { opacity: 0; transform: scale(1.06); }
+  25%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+.piece.is-dragging {
+  z-index: 3;
+  cursor: grabbing;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    0 18px 34px rgba(0, 0, 0, 0.65);
+  transition: box-shadow 0.15s ease;
+}
+
+/* 整組黏合塊一起被拖動：不給每片各自的陰影，整塊才會讀成「一整幅」
+   而不是一堆各自浮起的碎片。 */
+.piece.is-group-dragging {
+  z-index: 3;
+  cursor: grabbing;
+  border-radius: 0;
+  box-shadow: none;
+  filter: brightness(1.07);
+  transition: box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+/* 拖曳時的落點指示 */
+.piece.is-drop-target {
+  box-shadow:
+    inset 0 0 0 3px var(--gild),
+    inset 0 0 24px var(--gild-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piece,
+  .progress-bar-fill,
+  .primary-btn { transition-duration: 0.01ms; }
+  .piece.is-just-bonded::after,
+  .piece.is-just-bonded::before { animation: none; }
+}
+
+/* ---------- 連擊回饋 ---------- */
+/* 砌對的即時回饋。之前做成細白字 + 淡出，在花俏的照片上根本看不見 ——
+   改回實心膠囊，用跟「已歸位輪廓」同一個玉綠，語意才連得起來。 */
+.feedback-badge {
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  z-index: 10;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 9px 22px;
+  border-radius: 999px;
+  background: var(--lock);
+  color: #06281c;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 10px 26px -6px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  animation: pop-rise 1.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.feedback-combo {
+  color: #06281c;
+  font-size: 0.7em;
+  font-weight: 800;
+  opacity: 0.75;
+}
+
+@keyframes pop-rise {
+  0%   { opacity: 0; transform: translate(-50%, 10px) scale(0.6); }
+  18%  { opacity: 1; transform: translate(-50%, 0) scale(1.12); }
+  30%  { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  78%  { opacity: 1; transform: translate(-50%, -6px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -26px) scale(0.96); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback-badge { animation: none; opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---------- 底部工具列 ---------- */
+.game-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.tool-dock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 16px 6px;
+  flex: none;
+}
+
+.tool-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  padding: 8px 16px;
+  min-width: 74px;
+  backdrop-filter: blur(12px);
+  position: relative;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.tool-btn:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.13); }
+.tool-btn:disabled { opacity: 0.32; }
+
+.tool-btn .glyph { font-size: 19px; line-height: 1; }
+
+.tool-btn .label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+
+.tool-btn .count { color: var(--gild); font-weight: 700; }
+
+.progress-moves {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  margin: 0;
+  flex: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-moves b { color: var(--dim); font-weight: 700; }
+
+/* ---------- 原圖預覽（長按）---------- */
+.peek-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: rgba(10, 9, 8, 0.9);
+  backdrop-filter: blur(10px);
+  animation: fade-in 0.18s ease;
+  /* 不吃指標事件 —— 否則 overlay 一蓋上去就會改變 hit-test，手指稍微
+     一動就在睇圖掣上觸發 pointerleave，overlay 會自己提早收起。
+     擋住棋盤操作改由 handlePointerDown 的 `peeking` 判斷負責。 */
+  pointer-events: none;
+}
+
+.peek-frame {
+  width: auto;
+  height: 100%;
+  max-height: 78svh;
+  aspect-ratio: var(--board-ratio);
+  border-radius: var(--r-md);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.8);
+}
+
+.peek-hint {
+  position: absolute;
+  bottom: calc(12% + var(--safe-bottom));
+  color: var(--dim);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+}
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- 主題章節選擇（第一層）---------- */
+.chapter-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 8px 16px 24px;
+  align-content: start;
+  overflow-y: auto;
+}
+
+.chapter-tile {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  padding: 0;
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.7);
+  transition: transform 0.15s ease;
+}
+
+.chapter-tile:active:not(:disabled) { transform: scale(0.96); }
+
+/* 整章集齊給一圈裱框金 —— 收藏完成的視覺獎勵 */
+.chapter-tile.is-complete { border-color: var(--gild); }
+
+.chapter-tile-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 7px;
+  padding: 10px 11px;
+  text-align: left;
+  background: linear-gradient(to top, rgba(10, 9, 8, 0.92) 8%, rgba(10, 9, 8, 0.15) 62%, transparent);
+}
+
+.chapter-tile-name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.chapter-tile-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gild);
+  font-variant-numeric: tabular-nums;
+}
+
+.chapter-tile-bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.chapter-tile-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gild);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chapter-tile.is-locked {
+  background: var(--mat);
+  box-shadow: none;
+}
+
+.chapter-tile-lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  opacity: 0.45;
+}
+
+/* ---------- 關卡選擇（第二層）---------- */
+.level-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 8px 16px 24px;
+  align-content: start;
+  overflow-y: auto;
+}
+
+.level-tile {
+  aspect-ratio: var(--board-ratio);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.7);
+  transition: transform 0.15s ease;
+}
+
+.level-tile:active:not(:disabled) { transform: scale(0.95); }
+
+.level-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(10, 9, 8, 0.85));
+}
+
+.level-tile-number {
+  position: relative;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 自帶深色底的小膠囊。之前只靠 text-shadow，遇上亮色照片（森林、雪山）
+   幾乎讀不到 —— 暗角漸層只做了底部，標籤卻在頂部。 */
+.level-tile-size {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(10, 9, 8, 0.62);
+  backdrop-filter: blur(4px);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.level-tile-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: var(--lock);
+  color: #06281c;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.level-tile.is-locked {
+  background: var(--mat);
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+}
+
+.level-tile.is-locked::before { display: none; }
+.level-tile.is-locked .level-tile-number { color: var(--faint); font-size: 18px; }
+
+/* ---------- 設定 ---------- */
+.settings-body {
+  flex: 1;
+  padding: 12px 16px 24px;
+  overflow-y: auto;
+}
+
+.settings-group-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gild);
+  margin: 6px 4px 10px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 16px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-size: 16px;
+  color: var(--text);
+  transition: background 0.15s ease;
+}
+
+.settings-row:last-child { border-bottom: none; }
+.settings-row:active { background: rgba(255, 255, 255, 0.07); }
+
+.settings-row.is-selected .settings-row-label { color: var(--gild); font-weight: 600; }
+
+.settings-row-check {
+  color: var(--gild);
+  font-size: 15px;
+  font-weight: 800;
+  width: 1em;
+  text-align: center;
+}
+
+/* ---------- 章節過渡（完成一章第 5 關的「大時刻」）---------- */
+.transition-screen {
+  padding: 0;
+  background: #0d1220;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+
+.transition-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* caption 由下方浮上來，蓋在影片最後一幀上 */
+.transition-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 40px 26px calc(40px + var(--safe-bottom));
+  background: linear-gradient(to top, rgba(6, 8, 14, 0.95) 45%, transparent);
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+  transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.transition-caption.is-shown {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.transition-text {
+  margin: 0;
+  max-width: 24ch;
+  text-align: center;
+  font-size: 17px;
+  line-height: 1.6;
+  color: #fff;
+  text-wrap: balance;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transition-caption { transition: none; }
+}
+
+/* ---------- 過關結算 ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 9, 8, 0.78);
+  backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-bottom: calc(24px + var(--safe-bottom));
+  z-index: 50;
+  animation: fade-in 0.22s ease;
+}
+
+.modal-card {
+  background: linear-gradient(180deg, var(--mat-2), var(--mat));
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  padding: 26px 22px 22px;
+  text-align: center;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7);
+  animation: modal-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 完成的圖裱起來當獎勵 —— 玩家收藏的是照片，不是分數 */
+.modal-photo {
+  width: 104px;
+  height: auto;
+  aspect-ratio: var(--board-ratio);
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  margin: 0 auto 16px;
+  border: 3px solid var(--gild);
+  box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.8);
+}
+
+/* 完成一關獲得的貼紙 —— 靜態顯示，不做額外動畫 */
+.sticker-earned {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.sticker-earned-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 2px solid var(--lock);
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.8);
+}
+
+.sticker-earned-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--lock);
+}
+
+.modal-kicker {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gild);
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.modal-card h2 {
+  margin: 0 0 4px;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.modal-level-name {
+  color: var(--dim);
+  margin: 0 0 16px;
+  font-size: 14px;
+}
+
+.modal-stats {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  padding: 14px 0 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+
+.modal-stat .v {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.modal-stat .k {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+  margin-top: 3px;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* ==========================================================================
+   廣告位
+   --------------------------------------------------------------------------
+   每個廣告位都「先佔位、後填充」：容器高度固定，廣告載入前後版面不位移。
+   IT 只需把 SDK 的 view 掛進 [data-ad-mount] 節點，不必動任何版面 CSS。
+   ========================================================================== */
+.ad-slot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.ad-slot--banner {
+  min-height: var(--ad-banner-h);
+  height: var(--ad-banner-h);
+  margin-bottom: var(--safe-bottom);
+  background: rgba(255, 255, 255, 0.035);
+  border-top: 1px solid var(--line);
+}
+
+.ad-slot--native {
+  aspect-ratio: var(--board-ratio);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ad-slot__mount {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 絕對定位置中：mount 會佔滿 100% 寬，若佔位字是一般兄弟元素會被它
+   擠到右邊並換行（實測過的版面 bug）。 */
+.ad-slot__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--faint);
+  text-align: center;
+  pointer-events: none;
+}
+
+.ad-slot[data-ad-filled='true'] .ad-slot__placeholder { display: none; }
+
+/* 獎勵式廣告按鈕 —— 明確標示是廣告，符合 App Store / Play 政策 */
+.rewarded-btn {
+  background: var(--gild-soft);
+  border: 1px solid var(--gild);
+  color: var(--gild);
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rewarded-btn .ad-tag {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--gild);
+  color: #2a1e06;
+  font-weight: 800;
+}
+
+/* ---------- 橫向（Landscape）---------- */
+@media (orientation: landscape) and (max-height: 600px) {
+  .game-body {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 0 16px 6px;
+  }
+
+  .game-body .board-wrap { padding: 0; }
+
+  /* 橫向 chrome 實測 129px（頂欄 60 + 進度 25 + 廣告 44）+ 裱褙 12。
+     5:8 直向棋盤在橫向手機上本來就很小 —— 見 README 的鎖直向建議。 */
+  .board-mat { max-width: min(100%, calc((100svh - 148px) * 0.625)); }
+
+  .game-body .game-foot {
+    width: 104px;
+    flex: none;
+    justify-content: center;
+  }
+
+  .tool-dock {
+    flex-direction: column;
+    padding: 0;
+    gap: 8px;
+  }
+
+  .tool-btn { width: 100%; min-width: 0; }
+
+  .progress-row { padding: 2px 16px 6px; }
+
+  .level-grid { grid-template-columns: repeat(6, 1fr); }
+
+  .ad-slot--banner { --ad-banner-h: 44px; }
+}
+
+/* ---------- 平板 / 桌機預覽 ---------- */
+@media (min-width: 620px) {
+  /* width:100% 不能省 —— .screen 是 column flex 容器裡的項目，只寫
+     margin:0 auto 會取消 stretch，寬度塌成內容寬。 */
+  .screen {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .level-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* 橫向機身比 520px 寬得多，放寬上限讓棋盤與側欄有呼吸空間。
+   這條必須排在 min-width:620px 之後，否則會被它覆蓋。 */
+@media (orientation: landscape) and (max-height: 600px) and (min-width: 620px) {
+  .screen { max-width: 900px; }
+}

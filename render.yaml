@@ -1,0 +1,50 @@
+# Render 部署設定（Blueprint）
+#
+# 用法：把這個 repo 推上 GitHub / GitLab，然後在 Render 揀
+# "New +" → "Blueprint" → 選這個 repo，Render 會自動讀這個檔建立服務。
+# 也可以不用 Blueprint，直接在 Render 手動建 Static Site，把下面的
+# buildCommand 與 staticPublishPath 照抄進去即可。
+#
+# 靜態網站在 Render 免費方案是免費的（含 100GB/月流量）。
+# 這個遊戲是純前端 Vite 專案，build 出 dist/ 就完事，不需要伺服器。
+
+services:
+  - type: web
+    name: puzzlepanda
+    runtime: static
+    # npm ci 比 npm install 快而且嚴格跟 package-lock.json，CI 環境應該用這個
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+
+    headers:
+      # 帶 hash 的打包檔可以永久快取（檔名一改就是新檔）
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      # 圖片／音效／影片體積大但不常改，快取一日並允許背景重驗證
+      - path: /images/*
+        name: Cache-Control
+        value: public, max-age=86400, stale-while-revalidate=604800
+      - path: /stickers/*
+        name: Cache-Control
+        value: public, max-age=86400, stale-while-revalidate=604800
+      - path: /sfx/*
+        name: Cache-Control
+        value: public, max-age=86400, stale-while-revalidate=604800
+      - path: /intro/*
+        name: Cache-Control
+        value: public, max-age=86400, stale-while-revalidate=604800
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+
+    routes:
+      # 單頁應用：任何路徑都回 index.html。
+      # 這個遊戲目前沒有前端路由，但加了之後日後要加也不用改設定。
+      - type: rewrite
+        source: /*
+        destination: /index.html
