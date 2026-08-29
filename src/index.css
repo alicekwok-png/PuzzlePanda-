@@ -1021,31 +1021,32 @@ button:focus-visible,
   line-height: 1.2;
 }
 
+/* 完成度用實心藥丸，唔用幼 bar —— 幼 bar 喺相片上面又幼又睇唔清，
+   而且「3/5」呢種短數字本身就適合做徽章。
+   （幼 bar 冇取消，遊戲畫面嗰條即時進度仍然用返 bar。） */
 .chapter-tile-progress {
-  display: flex;
+  align-self: flex-start;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--green);
+  border: 2px solid var(--outline);
+  box-shadow: 0 3px 0 var(--green-shadow);
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 800;
-  color: var(--gold);
+  color: #fff;
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 0 rgba(4, 6, 16, 0.28);
 }
 
-.chapter-tile-bar {
-  flex: 1;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(4, 6, 16, 0.5);
-  overflow: hidden;
-}
-
-.chapter-tile-bar > span {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--gold);
-  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+.chapter-tile.is-complete .chapter-tile-progress {
+  background: var(--accent-gold);
+  box-shadow: 0 3px 0 var(--gold-shadow);
+  color: var(--surface);
+  text-shadow: none;
 }
 
 .chapter-tile.is-locked {
@@ -2292,18 +2293,31 @@ button:focus-visible,
 }
 
 /* ==========================================================================
-   遊戲感（唔好似網頁）
+   遊戲感（唔好似網頁）—— design/ui-design-system-spec.md
    --------------------------------------------------------------------------
    分別喺邊？網頁介面係「平面色塊 + 幼邊 + 柔和陰影」；手遊介面係
    「厚身淺色描邊 + 硬投影 + 描邊字」。三樣加埋，同一個色板都會由
    「網站」變成「App」。
 
-   ⚠️ 描邊色刻意用暖米白（唔係純白）—— 呢個 App 嘅色板係暖橘金系，
-   純白描邊會偏冷，同棋盤入面啲相打交。
+   ⚠️ 規格入面嗰份 token 表（--bg-panel / --accent / --card-face …）係對住
+   一個舊版色板寫嘅，同本專案而家實際用緊嗰套唔一樣。所以下面嘅新 token
+   一律指返現有 token，唔另開一套數值 —— 兩套色版並存嘅話，改完一邊
+   另一邊唔跟，遲早會撞。對照：
+       規格 --accent-gold #ffc93c  →  本專案 --gold #ffc94d
+       規格 --accent-pink #ff5c8a  →  本專案 --pink #ff6f91
    ========================================================================== */
 :root {
   --outline: rgba(253, 246, 232, 0.92);
   --outline-soft: rgba(253, 246, 232, 0.34);
+
+  /* 資源／星星類徽章。指返 --gold，唔另開數值。 */
+  --accent-gold: var(--gold);
+  /* 遊戲化強調色（困難標籤、限時活動）。⚠️ 唔好同錯誤／警示色撈亂。 */
+  --accent-pink: var(--pink);
+  /* 立體掣底部嗰道「側牆」。厚度 4–6px。 */
+  --bevel-shadow: rgba(0, 0, 0, 0.45);
+  /* 深色底上面嘅極淡紋理線。要淡到唔會搶內容。 */
+  --texture-line: rgba(255, 255, 255, 0.03);
 }
 
 /* 描邊字：paint-order 令描邊畫喺字身後面，唔會食住字型輪廓。
@@ -2314,7 +2328,7 @@ button:focus-visible,
 }
 
 /* ---------- 底 ---------- */
-/* 平色底係「網頁感」最大嘅來源。加一層極淡嘅斜格紋同中心光，
+/* 平色底係「網頁感」最大嘅來源。加一層極淡斜格紋同中心光，
    個底就會有質感而唔會搶走內容。 */
 .screen::before {
   content: '';
@@ -2324,31 +2338,51 @@ button:focus-visible,
   pointer-events: none;
   background:
     radial-gradient(ellipse 120% 70% at 50% 0%, rgba(249, 130, 30, 0.13), transparent 70%),
-    repeating-linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.022) 0 2px,
-      transparent 2px 9px
-    );
+    repeating-linear-gradient(135deg, var(--texture-line) 0 2px, transparent 2px 9px);
 }
 
-/* ---------- 主要掣 ---------- */
+/* 首頁 hero 專屬背景（唔套用去其他 screen）。
+   ⚠️ 呢張係固定比例嘅靜態圖，唔係可以無限 tile 嘅紋理 —— 唔同機嘅螢幕
+   高度會令佢顯示比例唔同。所以限死喺上半部，再用同一個 gradient 向下
+   漸返純色，就唔會喺任何尺寸裁得核突。
+   同一個 gradient 亦負責淡化：puzzle piece 要淡到剩返模糊輪廓同暖橙
+   光暈，睇唔清實際形狀 —— 睇得清就會搶走熊貓同啲掣。 */
+.home-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(15, 18, 38, 0.72) 0%,
+      rgba(15, 18, 38, 0.8) 40%,
+      rgba(15, 18, 38, 0.95) 60%,
+      var(--bg) 72%
+    ),
+    url('/textures/home-hero.webp') top center / cover no-repeat;
+}
+
+/* ---------- 立體掣 ---------- */
+/* 側牆 5px（規格要 4–6px），撳落去壓扁到 1px，模擬真實按鍵。 */
 .primary-btn {
   border: 3px solid var(--outline);
-  box-shadow: 0 5px 0 var(--orange-shadow), 0 10px 18px rgba(4, 6, 16, 0.45);
+  box-shadow: 0 5px 0 var(--orange-shadow), 0 10px 18px var(--bevel-shadow);
   text-shadow: 0 2px 0 rgba(4, 6, 16, 0.22);
   letter-spacing: 0.02em;
 }
 
 .primary-btn:active {
-  box-shadow: 0 1px 0 var(--orange-shadow), 0 4px 9px rgba(4, 6, 16, 0.4);
+  box-shadow: 0 1px 0 var(--orange-shadow), 0 4px 9px var(--bevel-shadow);
 }
 
 .primary-btn.is-next {
-  box-shadow: 0 5px 0 var(--green-shadow), 0 10px 18px rgba(4, 6, 16, 0.45);
+  box-shadow: 0 5px 0 var(--green-shadow), 0 10px 18px var(--bevel-shadow);
 }
 
 .primary-btn.is-next:active {
-  box-shadow: 0 1px 0 var(--green-shadow), 0 4px 9px rgba(4, 6, 16, 0.4);
+  box-shadow: 0 1px 0 var(--green-shadow), 0 4px 9px var(--bevel-shadow);
 }
 
 .secondary-btn {
@@ -2356,7 +2390,6 @@ button:focus-visible,
   text-shadow: 0 1px 0 rgba(4, 6, 16, 0.3);
 }
 
-/* ---------- 工具鍵 ---------- */
 .icon-btn {
   border: 2px solid var(--outline-soft);
 }
@@ -2376,7 +2409,6 @@ button:focus-visible,
 }
 
 /* ---------- 棋盤 ---------- */
-/* 參考稿嗰個黃色厚框：棋盤要有個實實在在嘅框，唔係一塊浮喺度嘅色塊。 */
 .board-mat {
   border: 3px solid var(--outline-soft);
 }
@@ -2395,9 +2427,28 @@ button:focus-visible,
   outline: none;
 }
 
+/* 章節名做成摺角橫幅（banner），唔係淨係打粗個字 */
 .chapter-tile-name {
+  align-self: flex-start;
+  position: relative;
+  padding: 3px 12px 3px 9px;
+  border-radius: 4px 0 0 4px;
+  background: linear-gradient(145deg, var(--orange), var(--orange-deep));
+  box-shadow: 0 3px 0 rgba(4, 6, 16, 0.4);
   paint-order: stroke fill;
-  -webkit-text-stroke: 3px rgba(4, 6, 16, 0.55);
+  -webkit-text-stroke: 2.5px rgba(4, 6, 16, 0.35);
+}
+
+/* 右邊嗰隻摺角 */
+.chapter-tile-name::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 100%;
+  border: solid transparent;
+  border-width: 0 0 100% 8px;
+  border-left-color: var(--orange-deep);
+  filter: brightness(0.72);
 }
 
 .chapter-tile-lock {
@@ -2419,7 +2470,38 @@ button:focus-visible,
 
 .home-logo {
   border: 3px solid var(--outline);
-  box-shadow: 0 6px 0 rgba(4, 6, 16, 0.35), 0 12px 22px rgba(4, 6, 16, 0.5);
+  box-shadow: 0 6px 0 var(--bevel-shadow), 0 12px 22px rgba(4, 6, 16, 0.5);
+}
+
+/* 總進度徽章：icon + 數字嘅實心藥丸，唔係淨係打一舊字 */
+.home-progress {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 14px auto 0;
+  padding: 5px 15px 5px 11px;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #ffd873, var(--accent-gold));
+  border: 2px solid var(--outline);
+  box-shadow: 0 4px 0 var(--gold-shadow), 0 8px 14px rgba(4, 6, 16, 0.4);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-progress .home-progress-star {
+  width: 16px;
+  height: 16px;
+  color: var(--gold-shadow);
+}
+
+.home-progress span {
+  opacity: 0.7;
+  margin-left: -3px;   /* 收返 flex gap，「48/50」要黐實 */
 }
 
 /* ---------- 頂欄 ---------- */
@@ -2431,8 +2513,6 @@ button:focus-visible,
 .level-title .level-kicker {
   -webkit-text-stroke: 2.5px rgba(4, 6, 16, 0.5);
 }
-
-
 
 /* ---------- 連擊回饋 ---------- */
 .feedback-badge {

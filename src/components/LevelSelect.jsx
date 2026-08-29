@@ -63,9 +63,6 @@ function ChapterGrid({ progress, onSelectChapter, onBack }) {
                   {/* 只顯示當前語言的章節名，不再中英並列 */}
                   <span className="chapter-tile-name">{t(`chapters.${chapter.key}`)}</span>
                   <span className="chapter-tile-progress">
-                    <span className="chapter-tile-bar">
-                      <span style={{ width: `${(done / 5) * 100}%` }} />
-                    </span>
                     {done}/5
                   </span>
                 </span>

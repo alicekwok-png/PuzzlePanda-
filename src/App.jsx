@@ -73,9 +73,14 @@ export default function App() {
   }
 
   if (screen === 'home') {
+    /* 總進度：全部 50 關入面完成咗幾多。首頁 hero 除咗裝飾之外要有一層
+       實際資訊，唔好淨係得字同兩粒掣。 */
+    const completedTotal = LEVELS.filter((l) => progress.completed[l.id]).length;
+
     return (
-      <div className="screen home-screen" style={{ '--level-bg': LEVELS[0].theme.background }}>
-        <div className="ambient" />
+      /* 首頁唔用 .ambient（模糊遊戲相）—— hero 改用 puzzle piece 主題圖，
+         見 index.css 嘅 .home-screen::after。 */
+      <div className="screen home-screen">
 
         <button
           className="icon-btn home-settings"
@@ -93,6 +98,13 @@ export default function App() {
           {/* 遊戲只有英文名，三種語言都顯示 PuzzlePanda，不翻譯 */}
           <h1>{t('home.title')}</h1>
           <p className="home-subtitle">{t('home.subtitle')}</p>
+
+          {/* 總進度徽章 */}
+          <p className="home-progress">
+            <Icon name="star" className="home-progress-star" />
+            <b>{completedTotal}</b>
+            <span>/{LEVELS.length}</span>
+          </p>
         </div>
         <div className="home-actions">
           <button className="primary-btn big" onClick={goToLevels}>
