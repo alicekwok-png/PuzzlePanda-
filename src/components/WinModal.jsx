@@ -17,11 +17,14 @@ export default function WinModal({ level, moves, bestMoves, hasNext, onNext, onR
         </div>
 
         {/* 每完成一關獲得該章第 N 張貼紙。貼紙狀態完全由 progress.completed
-            推導，沒有額外 storage 欄位。 */}
+            推導，沒有額外 storage 欄位。
+            用同一批去底貼紙（見 scripts/prepare_stickers.py）—— 貼紙簿同
+            這裡共用一套資源，不會出現「同一張貼紙兩個樣」。舊的 .jpg 版本
+            自帶深藍方塊底，貼在虛線框裡會變成「框裡再有一張卡」。 */}
         <div className="sticker-earned">
           <img
             className="sticker-earned-img"
-            src={`/stickers/${level.chapterKey}/sticker-0${level.levelInChapter}.jpg`}
+            src={`/stickers/${level.chapterKey}/sticker-0${level.levelInChapter}.webp`}
             alt=""
           />
           <span className="sticker-earned-label">{t('win.stickerEarned')}</span>

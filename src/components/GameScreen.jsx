@@ -342,8 +342,12 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
         >
           <div className="progress-bar-fill" style={{ width: `${progressPct}%` }} />
           <span className="progress-tick" />
-          {/* 星星旋鈕騎喺填充嘅前端跟住行 */}
-          <span className="progress-knob" style={{ left: `${progressPct}%` }}>
+          {/* 星星旋鈕騎喺填充嘅前端跟住行。左右各收 12px（旋鈕半徑），
+              否則 0% 同 100% 嗰陣粒星會凸出軌道外面壓住旁邊嘅藥丸。 */}
+          <span
+            className="progress-knob"
+            style={{ left: `calc(12px + (100% - 24px) * ${progressPct} / 100)` }}
+          >
             ⭐
           </span>
         </div>
@@ -354,10 +358,16 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
           <p className="progress-moves">
             {t('game.movesReadout')} <b>{moves}</b>
           </p>
+          {/* 重新開始搬上嚟同兩粒藥丸排埋一行 —— 底部成條工具列因此可以
+              收起，慳返嗰 47px 全部俾棋盤。 */}
+          <button type="button" className="restart-chip" onClick={resetLevel}>
+            <span aria-hidden="true">⟲</span>
+            {t('game.restart')}
+          </button>
         </div>
       </div>
 
-      <div className="game-body">
+      <div className={`game-body${hintsLeft <= 0 ? ' has-dock' : ''}`}>
         <div className="board-wrap">
           {feedbackMsg && (
             <div className="feedback-badge" key={feedbackMsg.key}>
@@ -401,22 +411,18 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
           </div>
         </div>
 
-        <div className="game-foot">
-          <div className="tool-dock">
-            {/* undo / hint / peek 已經搬去 top-bar 的 icon-btn。
-                這裡只留沒有 icon 素材、也不在 toolbar 規格內的兩個動作。 */}
-            <button className="tool-btn" onClick={resetLevel}>
-              <span className="glyph">⟲</span>
-              <span className="label">{t('game.restart')}</span>
-            </button>
-            {hintsLeft <= 0 && (
+        {/* 提示用晒先出現。平時完全唔 render，唔好長期霸住棋盤嘅高度 ——
+            undo / hint / peek 喺頂欄，重新開始喺進度列。 */}
+        {hintsLeft <= 0 && (
+          <div className="game-foot">
+            <div className="tool-dock">
               <button className="tool-btn" onClick={handleEarnHint}>
                 <span className="glyph">🎬</span>
                 <span className="label">{t('game.watchAdForHint')}</span>
               </button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* 廣告版位：遊戲畫面底部橫幅 */}

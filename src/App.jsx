@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AlbumScreen from './components/AlbumScreen';
 import GameScreen from './components/GameScreen';
 import IntroScreen from './components/IntroScreen';
 import LevelSelect from './components/LevelSelect';
@@ -29,7 +30,8 @@ export default function App() {
   // 橫幅只在有預留高度的畫面顯示（關卡選擇 / 遊戲中）。
   // 首頁沒有預留高度，橫幅會蓋住「開始遊戲」按鈕，所以那裡收起。
   useEffect(() => {
-    if (screen === 'home' || screen === 'intro') hideBanner();
+    // 貼紙簿都唔預留橫幅高度 —— 嗰頁要似一本簿，唔應該有廣告條夾住。
+    if (screen === 'home' || screen === 'intro' || screen === 'album') hideBanner();
     else showBanner();
   }, [screen]);
 
@@ -41,6 +43,12 @@ export default function App() {
     feedback.tap();
     refreshProgress();
     setScreen('levels');
+  }
+
+  function goToAlbum() {
+    feedback.tap();
+    refreshProgress();
+    setScreen('album');
   }
 
   function handleSelectLevel(level) {
@@ -85,9 +93,15 @@ export default function App() {
           <h1>{t('home.title')}</h1>
           <p className="home-subtitle">{t('home.subtitle')}</p>
         </div>
-        <button className="primary-btn big" onClick={goToLevels}>
-          {t('home.startButton')}
-        </button>
+        <div className="home-actions">
+          <button className="primary-btn big" onClick={goToLevels}>
+            {t('home.startButton')}
+          </button>
+          <button type="button" className="album-entry-btn" onClick={goToAlbum}>
+            <span className="glyph" aria-hidden="true">📒</span>
+            {t('album.title')}
+          </button>
+        </div>
 
         {/* 開發者列：只在 npm run dev 或網址帶 ?dev=1 時出現。
             正式打包會被 Vite 整段移除，玩家看不到。 */}
@@ -126,6 +140,12 @@ export default function App() {
 
   if (screen === 'settings') {
     return <SettingsScreen onBack={() => setScreen('home')} />;
+  }
+
+  if (screen === 'album') {
+    // 用 visibleProgress：開發者模式解鎖全部關卡時，貼紙簿一樣照跟真實
+    // 完成紀錄，唔會扮晒儲齊（unlocked 同 completed 係兩件事）。
+    return <AlbumScreen progress={visibleProgress} onBack={() => setScreen('home')} />;
   }
 
   if (screen === 'levels') {

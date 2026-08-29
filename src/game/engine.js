@@ -186,17 +186,54 @@ export function moveGroup(board, from, to) {
 }
 
 /**
- * 提示：找一塊還沒完全接合的，回傳它現在的位置與它應該去的位置。
- * 優先挑「接合邊數最少」的，這樣提示才會用在最零散的那些塊上。
+ * 提示 = 直接幫玩家黐埋，唔係淨係著燈。
+ *
+ * ⚠️ 呢個係整個提示功能嘅重點，改之前睇清楚。
+ *
+ * 做法：每一次都揀一塊擺返佢自己嗰格，而且揀「擺落去即刻黐到最多邊」
+ * 嗰一塊。所以正確嗰一嚿會由一個起點一路向外生 —— 每撳一次都見到有
+ * 嘢黐埋，唔係淨係郁咗一格。
+ *
+ * 點解唔揀「淨賺最多接合」嗰步（喺任何位置砌起一嚿都計）：嗰種揀法
+ * 唔保證會收斂。喺棋盤中間砌起一嚿擺錯位嘅雲團一樣可以賺好多接合，
+ * 跟住又要拆返佢，一路撳會兜圈。而家用「已歸位格數」做推進指標，佢
+ * 每一步都嚴格加至少一格，所以最多 N² 步一定砌完。
+ *
+ * 唯一一次唔會黐到嘢係開局第一撳（成盤都未有一格啱，冇嘢可以黐）。
+ * 之後每一撳都必定至少黐到一條邊 —— 只要仲有未砌好嘅格，正確嗰嚿嘅
+ * 邊界就一定有隔籬位可以填。
+ *
+ * 回傳 { from, to }：from = 嗰塊而家喺邊，to = 佢應該去邊（= 佢嘅 id）。
  */
 export function findHint(board) {
-  const counts = bondCounts(board);
-  const candidates = board.cells
-    .map((pieceId, pos) => ({ pos, pieceId, bonds: counts[pos] }))
-    .filter(({ pos, pieceId }) => pos !== pieceId);
-  if (candidates.length === 0) return null;
-  const min = Math.min(...candidates.map((c) => c.bonds));
-  const pool = candidates.filter((c) => c.bonds === min);
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  return { from: pick.pos, to: pick.pieceId };
+  const { cells, size } = board;
+
+  const posOf = new Array(cells.length);
+  cells.forEach((pieceId, pos) => {
+    posOf[pieceId] = pos;
+  });
+
+  let best = -1;
+  let pool = [];
+
+  for (let pos = 0; pos < cells.length; pos++) {
+    if (cells[pos] === pos) continue; // 已經喺正確位置
+    const from = posOf[pos];
+    const next = [...cells];
+    [next[pos], next[from]] = [next[from], next[pos]];
+
+    const b = bondsAt({ cells: next, size }, pos);
+    const gained = (b.up ? 1 : 0) + (b.down ? 1 : 0) + (b.left ? 1 : 0) + (b.right ? 1 : 0);
+
+    if (gained > best) {
+      best = gained;
+      pool = [{ from, to: pos }];
+    } else if (gained === best) {
+      pool.push({ from, to: pos });
+    }
+  }
+
+  if (pool.length === 0) return null; // 已經砌好
+  // 打和就隨機，唔好次次都由同一個角落開始
+  return pool[Math.floor(Math.random() * pool.length)];
 }

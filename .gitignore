@@ -29,3 +29,12 @@ screenshots
 # Capacitor 加 platform 之後先會有，各自喺自己部機生成
 ios
 android
+
+# 設計交付嘅貼紙原圖（50 張 1024 PNG ≈ 56MB）。
+# 唔入 repo —— Render 每次 build 都要 clone，而且 git 歷史係永久嘅。
+# 要重新產生 public/stickers/ 就由 design 攞返兩個 zip 解壓喺呢度，
+# 再跑 python scripts/prepare_stickers.py。
+design/stickers/
+
+# Python
+__pycache__/
