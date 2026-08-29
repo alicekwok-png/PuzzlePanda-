@@ -38,11 +38,16 @@ export default function PuzzlePiece({
   /* 每塊都填滿自己那一格，縫隙不是靠縮細做出來，而是靠「未接合的邊才
      畫線」。接合了的邊完全不畫 —— 兩塊就無縫黏成一片，這就是玩家看到
      的「黐埋咗」。
-     已經在絕對正確位置的那一嚿，外框改用玉綠，同時回答「砌啱未」同
-     「擺對位未」兩件事。 */
-  if (bonds && !dragging && !groupDragging) {
-    const w = placed ? 2 : 1;
-    const line = placed ? 'var(--lock)' : 'rgba(0, 0, 0, 0.62)';
+     已經在絕對正確位置的那一嚿，外框改用設計的 teal，同時回答「砌啱未」
+     同「擺對位未」兩件事。
+
+     ⚠️ 落點提示都要喺呢度用 inline style 畫：inline boxShadow 會蓋過
+     class 入面嘅 .is-drop-target，兩者唔可以分開兩處寫。 */
+  if (dropTarget && !dragging && !groupDragging) {
+    style.boxShadow = 'inset 0 0 0 3px var(--teal), inset 0 0 0 999px rgba(215, 240, 236, 0.42)';
+  } else if (bonds && !dragging && !groupDragging) {
+    const w = placed ? 3 : 1;
+    const line = placed ? 'var(--teal)' : 'rgba(0, 0, 0, 0.62)';
     const sides = [];
     if (!bonds.up) sides.push(`inset 0 ${w}px 0 0 ${line}`);
     if (!bonds.down) sides.push(`inset 0 -${w}px 0 0 ${line}`);
@@ -53,11 +58,12 @@ export default function PuzzlePiece({
     if (sides.length) style.boxShadow = sides.join(', ');
   }
 
+  /* 拖曳姿態跟設計：拎起嚟會放大並向左傾，明顯係「手上嗰塊」。 */
   if (dragging) {
-    style.transform = `translate(${offset.x}px, ${offset.y}px) scale(1.06)`;
+    style.transform = `translate(${offset.x}px, ${offset.y}px) scale(1.2) rotate(-4deg)`;
   } else if (groupDragging) {
     // 整嚿一起跟手。抬起幅度細很多，讀起來像「一整塊」而不是一堆碎片。
-    style.transform = `translate(${offset.x}px, ${offset.y}px) scale(1.02)`;
+    style.transform = `translate(${offset.x}px, ${offset.y}px) scale(1.03)`;
   }
 
   return (

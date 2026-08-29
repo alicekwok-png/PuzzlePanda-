@@ -34,8 +34,8 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   const [hintsLeft, setHintsLeft] = useState(level.hints);
   const [won, setWon] = useState(false);
   const [draggingPos, setDraggingPos] = useState(null);
-  const [dropTarget, setDropTarget] = useState(null);
-  /* 拖動一個已歸位的格子時，整組黏合塊一起動。空集合代表拖的是散片。 */
+  /* 拖住嗰一嚿。connectedCluster 一定包含起點自己，所以散片 = size 1、
+     砌起咗嘅一嚿 = size > 1。冇「空集合」呢種情況。 */
   const [dragGroup, setDragGroup] = useState(() => new Set());
   const [dropCells, setDropCells] = useState(() => new Set());
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -75,7 +75,6 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setWon(false);
     setDraggingPos(null);
     setDragGroup(new Set());
-    setDropTarget(null);
     setDropCells(new Set());
     setOffset({ x: 0, y: 0 });
     setCombo(0);
@@ -113,7 +112,6 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     passedDeadzoneRef.current = false;
     setDraggingPos(position);
     setDragGroup(connectedCluster(board, position));
-    setDropTarget(null);
     setDropCells(new Set());
     setOffset({ x: 0, y: 0 });
     feedback.pickUp();
@@ -130,13 +128,11 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     }
 
     setOffset({ x: dx, y: dy });
-    const target = posFromClient(e.clientX, e.clientY);
     // 已歸位的格子一樣是合法落點 —— 不再排除它們
-    setDropTarget(target !== draggingPos ? target : null);
-    setDropCells(previewDestination(target));
+    setDropCells(previewDestination(posFromClient(e.clientX, e.clientY)));
   }
 
-  /** 拖動整組時，預覽這組會落在哪幾格；出界就回傳空集合。 */
+  /** 預覽這一嚿會落在哪幾格；出界就回傳空集合（一格都唔亮）。 */
   function previewDestination(target) {
     if (target == null || dragGroup.size === 0) return new Set();
     const size = board.size;
@@ -155,20 +151,18 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   function handlePointerUp(e) {
     if (draggingPos == null) return;
     const sourcePos = draggingPos;
-    const group = dragGroup;
     setDraggingPos(null);
     setDragGroup(new Set());
-    setDropTarget(null);
     setDropCells(new Set());
     setOffset({ x: 0, y: 0 });
 
     const targetPos = posFromClient(e.clientX, e.clientY);
     if (targetPos == null || targetPos === sourcePos) return;
 
-    // 拖的是已歸位的塊 → 整組平移；散片 → 單純兩格交換。
-    // 任何兩格都可以交換，包括已歸位的 —— 不再有「被拒絕」這回事。
-    const newBoard =
-      group.size > 0 ? moveGroup(board, sourcePos, targetPos) : swapCells(board, sourcePos, targetPos);
+    /* 一律走 moveGroup —— 單一散片就係一個 size 1 嘅 cluster，平移佢
+       同兩格交換完全等價，唔使再分兩條路。
+       任何兩格都可以交換，包括已歸位的 —— 冇「被拒絕」這回事。 */
+    const newBoard = moveGroup(board, sourcePos, targetPos);
 
     if (newBoard === board) {
       return; // 整組平移會出界，動作取消（素材沒有對應的失敗音效）
@@ -309,8 +303,10 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
             <img src="/icons/undo.png" alt="" />
           </button>
 
+          {/* 仲有次數就著金色 —— 設計用顏色分「有得用 / 用晒」，
+              比單靠數字徽章一眼睇得清 */}
           <button
-            className="icon-btn"
+            className={`icon-btn${hintsLeft > 0 ? ' is-armed' : ''}`}
             onClick={handleHint}
             disabled={hintsLeft <= 0}
             aria-label={t('game.hint')}
@@ -330,21 +326,35 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
             aria-label={t('game.peekAria')}
           >
             <img src="/icons/peek.png" alt="" />
-            <span className="icon-btn-badge">{peeksLeft}</span>
+            <span className="icon-btn-badge is-peek">{peeksLeft}</span>
           </button>
         </div>
       </div>
 
       <div className="progress-row">
-        <div className="progress-bar-track">
+        <div
+          className="progress-bar-track"
+          role="progressbar"
+          aria-valuenow={progressPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={t('game.progressAria')}
+        >
           <div className="progress-bar-fill" style={{ width: `${progressPct}%` }} />
+          <span className="progress-tick" />
+          {/* 星星旋鈕騎喺填充嘅前端跟住行 */}
+          <span className="progress-knob" style={{ left: `${progressPct}%` }}>
+            ⭐
+          </span>
         </div>
-        <p className="progress-label">
-          <b>{bonded}</b>/{totalBonds}
-        </p>
-        <p className="progress-moves">
-          {t('game.movesReadout')} <b>{moves}</b>
-        </p>
+        <div className="progress-counts">
+          <p className="progress-label">
+            <b>{bonded}</b>/{totalBonds}
+          </p>
+          <p className="progress-moves">
+            {t('game.movesReadout')} <b>{moves}</b>
+          </p>
+        </div>
       </div>
 
       <div className="game-body">
@@ -374,11 +384,13 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
                   placed={board.placed.has(position)}
                   bonds={bondsAt(board, position)}
                   justBonded={justBonded.has(position)}
-                  dragging={draggingPos === position && dragGroup.size === 0}
-                  groupDragging={dragGroup.has(position)}
-                  /* 拖整組時只認整組的落點：會出界就一格都不亮，
-                     免得單格高亮讓玩家以為放得下。 */
-                  dropTarget={dragGroup.size > 0 ? dropCells.has(position) : dropTarget === position}
+                  /* 散片 = 拎起嚟嘅姿態（放大 + 傾側）；
+                     砌起咗嘅一嚿 = 輕微抬起，讀起來像一整塊而唔係一堆碎片。 */
+                  dragging={draggingPos === position && dragGroup.size <= 1}
+                  groupDragging={dragGroup.size > 1 && dragGroup.has(position)}
+                  /* 只認整嚿嘅落點：會出界就一格都唔亮，
+                     免得單格高亮令玩家以為放得低。 */
+                  dropTarget={dropCells.has(position)}
                   offset={offset}
                   onPointerDown={handlePointerDown}
                   onPointerMove={handlePointerMove}
