@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  bondCounts,
+  bondCountsByPiece,
   bondProgress,
   bondsAt,
   computePlaced,
@@ -201,13 +201,18 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setBoard(newBoard);
     setMoves((m) => m + 1);
 
-    /* 回饋看的是「有沒有新接合」，不是「有沒有絕對歸位」——
-       玩家在任何位置砌起一嚿都應該即刻有反應。 */
-    const beforeCounts = bondCounts(board);
-    const afterCounts = bondCounts(newBoard);
-    const newlyBonded = afterCounts
-      .map((c, i) => (c > beforeCounts[i] ? i : -1))
-      .filter((i) => i >= 0);
+    /* 回饋睇嘅係「有冇新接合」，唔係「有冇絕對歸位」——
+       玩家喺任何位置砌起一嚿都應該即刻有反應。
+
+       ⚠️ 一定要按「塊」數接合，唔可以按「格」數（見 bondCountsByPiece）。
+       按格數嘅話，拖一嚿已經黐好嘅嘢周圍行都會一路彈 Excellent。 */
+    const beforeCounts = bondCountsByPiece(board);
+    const afterCounts = bondCountsByPiece(newBoard);
+    const newlyBondedPieces = afterCounts
+      .map((c, pieceId) => (c > beforeCounts[pieceId] ? pieceId : -1))
+      .filter((id) => id >= 0);
+    // 閃光要打喺格上面，所以由塊反查佢而家喺邊格
+    const newlyBonded = newlyBondedPieces.map((pieceId) => newBoard.cells.indexOf(pieceId));
 
     if (newlyBonded.length > 0) {
       const nextCombo = combo + 1;

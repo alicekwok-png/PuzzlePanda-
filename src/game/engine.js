@@ -107,12 +107,23 @@ export function bondProgress(board) {
   return { bonded, total: 2 * size * (size - 1) };
 }
 
-/** 每格目前接合了幾條邊 —— 用來找出「這一步新接合了哪幾格」。 */
-export function bondCounts(board) {
-  return board.cells.map((_, pos) => {
+/**
+ * 每一塊（唔係每一格）而家接合咗幾條邊，索引係 pieceId。
+ * 回傳 counts[pieceId] = 0..4。
+ *
+ * ⚠️ 一定要按「塊」數，唔可以按「格」數。
+ * 按格數嘅話，將一嚿已經黐好嘅拼圖整嚿搬去另一個位置，嗰幾個新格嘅
+ * 接合數就會由 0 升上去，被誤當成「啱啱黐到新嘢」—— 結果玩家一路拖
+ * 一嚿砌好咗嘅嘢周圍行，就會一路彈 Excellent。
+ * 按塊數就冇呢個問題：整嚿平移，每一塊嘅接合數都完全冇變。
+ */
+export function bondCountsByPiece(board) {
+  const counts = new Array(board.cells.length).fill(0);
+  board.cells.forEach((pieceId, pos) => {
     const b = bondsAt(board, pos);
-    return (b.up ? 1 : 0) + (b.down ? 1 : 0) + (b.left ? 1 : 0) + (b.right ? 1 : 0);
+    counts[pieceId] = (b.up ? 1 : 0) + (b.down ? 1 : 0) + (b.left ? 1 : 0) + (b.right ? 1 : 0);
   });
+  return counts;
 }
 
 /* ---------------------------------------------------------------------------
