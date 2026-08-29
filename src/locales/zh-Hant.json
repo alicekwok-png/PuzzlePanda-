@@ -37,6 +37,7 @@
   "home.startButton": "開始遊戲",
   "home.settingsAria": "設定",
   "daily.title": "每日任務",
+  "daily.shortLabel": "每日",
   "daily.openAria": "打開每日任務",
   "daily.lockedAria": "每日任務未解鎖，完成第 {{n}} 關解鎖",
   "daily.lockedBody": "完成第 {{n}} 關就解鎖每日任務。",

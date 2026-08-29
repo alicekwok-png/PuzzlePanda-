@@ -31,24 +31,30 @@ export function DailyMissionButton({ progress, onOpen }) {
   const mission = unlocked ? ensureTodayMission(progress) : null;
   const hasReward = unlocked && mission && !mission.claimed;
 
+  /* ⚠️ 唔用 .icon-btn。塞落 40px 嘅掣入面，扣埋內距同邊框，實際張插畫
+     淨係得廿一 px，個熊貓同月曆完全睇唔出係咩 —— 呢張圖白畫。
+     跟參考 app 嘅做法：做一個獨立嘅插畫物件 + 文字標籤，唔要掣嘅外殼。 */
   return (
     <button
       type="button"
-      className={`icon-btn home-daily${unlocked ? '' : ' is-locked'}`}
+      className={`home-corner is-right${unlocked ? '' : ' is-locked'}`}
       onClick={() => {
         feedback.tap();
         onOpen();
       }}
       aria-label={t(unlocked ? 'daily.openAria' : 'daily.lockedAria', { n: UNLOCK_AFTER_LEVEL })}
     >
-      <img className="home-daily-icon" src="/icons/daily-calendar.webp" alt="" />
-      {/* 未解鎖掛個鎖；解鎖咗而今日未攞獎就出粒紅點 */}
-      {!unlocked && (
-        <span className="home-daily-lock" aria-hidden="true">
-          <Icon name="lock" />
-        </span>
-      )}
-      {hasReward && <span className="home-daily-dot" aria-hidden="true" />}
+      <span className="home-corner-art">
+        <img src="/icons/daily-calendar.webp" alt="" />
+        {/* 未解鎖掛個鎖；解鎖咗而今日未攞獎就出粒紅點 */}
+        {!unlocked && (
+          <span className="home-daily-lock" aria-hidden="true">
+            <Icon name="lock" />
+          </span>
+        )}
+        {hasReward && <span className="home-daily-dot" aria-hidden="true" />}
+      </span>
+      <span className="home-corner-label">{t('daily.shortLabel')}</span>
     </button>
   );
 }

@@ -8,6 +8,7 @@
   "home.startButton": "Start",
   "home.settingsAria": "Settings",
   "daily.title": "Daily Mission",
+  "daily.shortLabel": "Daily",
   "daily.openAria": "Open daily mission",
   "daily.lockedAria": "Daily mission locked — finish level {{n}} to unlock",
   "daily.lockedBody": "Finish level {{n}} to unlock daily missions.",

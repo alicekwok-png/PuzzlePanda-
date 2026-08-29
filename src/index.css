@@ -315,27 +315,76 @@ button:focus-visible,
   max-width: 26ch;
 }
 
-/* 首頁右上角嗰兩粒（每日任務 + 設定） */
-.home-top-actions {
+/* 設定齒輪擺右上角。
+   ⚠️ .icon-btn 喺下面設咗 position: relative（為咗掛徽章），而且寫喺後面，
+   同分權重下會贏。所以呢度一定要連 .icon-btn 一齊寫，否則齒輪會跌落
+   版面正中間。 */
+.icon-btn.home-settings {
   position: absolute;
   top: calc(var(--safe-top) + 14px);
   right: calc(var(--safe-right) + 16px);
   z-index: 2;
-  display: flex;
-  gap: 8px;
 }
 
-/* ---------- 每日任務 ---------- */
-.home-daily.is-locked { opacity: 0.55; }
+/* ---------- 首頁左右兩個大入口（貼紙簿 / 每日任務）----------
+   ⚠️ 唔用 .icon-btn。塞落 40px 嘅掣入面，扣埋內距同邊框，實際張插畫
+   淨係得二十幾 px，熊貓／月曆完全睇唔出係咩 —— 嗰啲圖等於白畫。
+   跟參考 app 嘅做法：獨立嘅插畫物件 + 文字標籤，唔要掣嘅外殼。 */
+.home-corner {
+  position: absolute;
+  top: calc(var(--safe-top) + 76px);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  transition: transform 0.12s ease;
+}
+
+.home-corner.is-left { left: calc(var(--safe-left) + 16px); }
+.home-corner.is-right { right: calc(var(--safe-right) + 16px); }
+
+.home-corner:active { transform: scale(0.93); }
+.home-corner.is-locked { opacity: 0.55; }
+
+.home-corner-art {
+  position: relative;
+  display: block;
+  width: 60px;
+  height: 60px;
+}
+
+.home-corner-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 5px rgba(4, 6, 16, 0.55));
+}
+
+.home-corner-label {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(4, 6, 16, 0.45);
+  border: 1px solid var(--outline-soft);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text);
+  white-space: nowrap;
+}
 
 /* 鎖掛喺左下角，紅點喺右上角 —— 兩個唔會同時出現，但擺開位就唔使
    為咗排版而互相遷就。 */
 .home-daily-lock {
   position: absolute;
-  bottom: -4px;
-  left: -4px;
-  width: 17px;
-  height: 17px;
+  bottom: -2px;
+  left: -6px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--surface);
   border: 2px solid var(--bg);
@@ -345,22 +394,25 @@ button:focus-visible,
   color: var(--dim);
 }
 
-.home-daily-lock .ui-icon { width: 9px; height: 9px; }
+.home-daily-lock .ui-icon { width: 11px; height: 11px; }
 
 .home-daily-dot {
   position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 12px;
-  height: 12px;
+  top: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--pink);
   border: 2px solid var(--bg);
   animation: pgPulse 1.6s ease-in-out infinite;
 }
 
-/* 彈窗版面跟設計交嘅 mockup：吉祥物徽章騎喺卡頂、標題、任務項、
-   虛線獎勵框、底部 CTA。 */
+/* 貼紙簿搬咗上左上角之後，下面淨返一粒主 CTA，可以做到闊身 */
+.home-start {
+  min-width: 62%;
+}
+
 .daily-card {
   position: relative;
   width: 100%;
@@ -1867,43 +1919,6 @@ button:focus-visible,
 }
 
 /* 首頁「貼紙簿」入口，同「開始遊戲」平排 */
-.home-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.album-entry-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: linear-gradient(145deg, var(--surface-2), #181b38);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  padding: 14px 22px;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text);
-  box-shadow: 0 5px 0 var(--drop-strong), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.album-entry-btn:active {
-  transform: translateY(4px);
-  box-shadow: 0 1px 0 var(--drop-strong), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-.album-entry-icon {
-  /* 呢個係彩色插畫（簿封面 + 三張熊貓貼紙），細過 30px 啲貼紙就糊晒，
-     所以要大過隔籬啲線稿圖示 */
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  display: block;
-  filter: drop-shadow(0 2px 3px rgba(4, 6, 16, 0.5));
-}
-
 /* 頂欄嗰個線稿 SVG：跟返隔籬幾個 icon 嘅大細同顏色 */
 .icon-btn-svg {
   width: 21px;
@@ -2600,7 +2615,6 @@ button:focus-visible,
   border-color: var(--outline);
 }
 
-.album-entry-btn,
 .album-pager-btn {
   border: 2px solid var(--outline-soft);
   text-shadow: 0 1px 0 rgba(4, 6, 16, 0.3);

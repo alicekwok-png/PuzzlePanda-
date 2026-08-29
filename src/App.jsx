@@ -84,22 +84,30 @@ export default function App() {
          見 index.css 嘅 .home-screen::after。 */
       <div className="screen home-screen">
 
-        <div className="home-top-actions">
-          {/* 每日任務。⚠️ 用真實 progress 唔用 visibleProgress —— 開發者
-              模式「解鎖全部關卡」唔應該連每日任務都解埋，佢睇嘅係
-              completed[10]，唔係 unlocked。 */}
-          <DailyMissionButton progress={progress} onOpen={() => setShowDaily(true)} />
-          <button
-            className="icon-btn"
-            onClick={() => {
-              feedback.tap();
-              setScreen('settings');
-            }}
-            aria-label={t('home.settingsAria')}
-          >
-            <Icon name="gear" className="icon-btn-svg" />
-          </button>
-        </div>
+        <button
+          className="icon-btn home-settings"
+          onClick={() => {
+            feedback.tap();
+            setScreen('settings');
+          }}
+          aria-label={t('home.settingsAria')}
+        >
+          <Icon name="gear" className="icon-btn-svg" />
+        </button>
+
+        {/* 左右各一個大插畫入口，設定喺角落 —— 跟參考 app 嘅版面。
+            塞落 40px 嘅細掣入面張插畫會細到睇唔出係咩，白畫。 */}
+        <button type="button" className="home-corner is-left" onClick={goToAlbum}>
+          <span className="home-corner-art">
+            <img src="/icons/album.webp" alt="" />
+          </span>
+          <span className="home-corner-label">{t('album.title')}</span>
+        </button>
+
+        {/* 每日任務入口。⚠️ 用真實 progress 唔用 visibleProgress ——
+            開發者模式「解鎖全部關卡」唔應該連每日任務都解埋，佢睇嘅係
+            completed[10]，唔係 unlocked。 */}
+        <DailyMissionButton progress={progress} onOpen={() => setShowDaily(true)} />
 
         <div className="home-hero">
           <img className="home-logo" src="/icons/logo.png" alt="" />
@@ -114,18 +122,10 @@ export default function App() {
             <span>/{LEVELS.length}</span>
           </p>
         </div>
-        <div className="home-actions">
-          <button className="primary-btn big" onClick={goToLevels}>
-            {t('home.startButton')}
-          </button>
-          {/* 彩色插畫版 icon（design/icons/sticker-album-icon.png）。
-              遊戲頂欄嗰個入口用線稿 SVG，唔用呢張 —— 嗰行全部係單色
-              線稿，插畫擺埋去會好突兀。 */}
-          <button type="button" className="album-entry-btn" onClick={goToAlbum}>
-            <img className="album-entry-icon" src="/icons/album.webp" alt="" />
-            {t('album.title')}
-          </button>
-        </div>
+        {/* 貼紙簿搬咗上左上角，所以下面淨返一粒主 CTA，可以做到大大粒 */}
+        <button className="primary-btn big home-start" onClick={goToLevels}>
+          {t('home.startButton')}
+        </button>
 
         {/* 開發者列：只在 npm run dev 或網址帶 ?dev=1 時出現。
             正式打包會被 Vite 整段移除，玩家看不到。 */}
