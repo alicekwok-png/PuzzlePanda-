@@ -125,8 +125,10 @@ function LevelGrid({ chapter, progress, onSelectLevel, onBack }) {
                   {lvl.size}×{lvl.size}
                 </span>
               )}
+              {/* 顯示全局關數（1–50），唔係章內序號 —— 每章都由 1 數起
+                  嘅話，10 章就會有 10 個「第 1 關」，玩家分唔到自己去到邊。 */}
               <span className="level-tile-number">
-                {locked ? <Icon name="lock" /> : lvl.levelInChapter}
+                {locked ? <Icon name="lock" /> : lvl.id}
               </span>
               {completed && (
                 <span className="level-tile-check">

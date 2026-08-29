@@ -544,20 +544,22 @@ button:focus-visible,
   gap: 6px;
 }
 
+/* 5 個工具鍵 + 返回 + 一條進度條要塞喺同一行。34px 係下限 ——
+   再細觸控目標就唔夠，再大條 bar 就短過 140px，三隻里程碑熊貓會黐埋。 */
 .game-screen > .top-bar .icon-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 13px;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
 }
 
 .game-screen > .top-bar .icon-btn img,
 .game-screen > .top-bar .icon-btn .ui-icon,
 .game-screen > .top-bar .icon-btn .icon-btn-svg {
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
 }
 
-.game-screen > .top-bar .top-bar-actions { gap: 4px; }
+.game-screen > .top-bar .top-bar-actions { gap: 3px; }
 
 .progress-bar-track {
   position: relative;
@@ -654,6 +656,34 @@ button:focus-visible,
   align-items: center;
   justify-content: center;
   transition: left 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- 窄機：進度條自動落第二行 ----------
+   6 個掣（返回／復原／重新開始／提示／貼紙簿／睇圖）加一條進度條，
+   喺窄畫面塞唔落同一行。實測條 bar 嘅闊度同三隻里程碑熊貓之間嘅空隙：
+     430px → bar 174，空隙 18   ✅
+     393px → bar 137，空隙 8    ✅ 迫但唔重疊
+     375px → bar 119，空隙 3    ❌
+     360px → bar 104，空隙 0    ❌ 啱啱好貼住
+     320px → bar  64，空隙 -10  ❌ 直情疊住
+
+   所以斷點揀 389px：393 以上維持一行（棋盤 89%），375 以下就用
+   flex-wrap 令進度條自己落一行攤到成個闊度（熊貓之間有 50–67px 位）。
+
+   ⚠️ 斷點唔好調高過 389 —— 393px（iPhone 14/15/16 Pro）一落第二行，
+   棋盤即刻由 89% 跌到 83%，而嗰 8px 空隙其實夠用。
+   ⚠️ 落咗第二行就高咗，所以 --chrome-h 要一齊調，否則棋盤會計錯尺寸
+   撞到廣告條。 */
+@media (max-width: 389px) {
+  :root { --chrome-h: 134px; }
+
+  .game-screen > .top-bar { flex-wrap: wrap; }
+
+  .top-bar-progress {
+    order: 3;
+    flex: 1 0 100%;
+    padding: 4px 2px 0;
+  }
 }
 
 /* ---------- 棋盤區 ---------- */

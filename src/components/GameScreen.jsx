@@ -379,6 +379,14 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
             <img src="/icons/undo.png" alt="" />
           </button>
 
+          {/* 重新開始。⚠️ 一定要用同「復原」完全唔同輪廓嘅圖示 ——
+              兩個都用圓圈箭嘴嘅話玩家會當佢哋係同一樣嘢。
+              擺喺復原隔籬（兩個都係「返轉頭」類），刻意唔擺最右
+              —— 最右最易撳到，而重新開始係唔可以 undo 嘅。 */}
+          <button className="icon-btn" onClick={resetLevel} aria-label={t('game.restart')}>
+            <Icon name="shuffle" className="icon-btn-svg" />
+          </button>
+
           {/* 仲有次數就著金色 —— 設計用顏色分「有得用 / 用晒」，
               比單靠數字徽章一眼睇得清 */}
           <button
