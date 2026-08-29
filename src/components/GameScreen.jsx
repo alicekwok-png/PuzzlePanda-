@@ -283,6 +283,33 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     commitBoard(swapCells(board, found.from, found.to));
   }
 
+  /* ⚠️ 收 peek 嘅保險：只要 peeking 係 true，就喺 window 度聽鬆手。
+     單靠粒掣自己嗰個 onPointerUp 係唔夠嘅 ——
+     1. 撳落去嗰下 peeksLeft 會減到 0，粒掣即刻變 disabled，
+        而 disabled 嘅掣喺真機上唔會再收到任何 pointer 事件，
+        「鬆手」永遠傳唔到，overlay 就卡死收唔返（實機報障就係咁）；
+     2. 手指滑出咗粒掣範圍外面先鬆手；
+     3. 中途切走 App／來電，系統直接取消個 pointer。
+     overlay 卡住嘅話成個遊戲會廢咗 —— 棋盤喺 peeking 期間係唔收操作嘅。
+
+     故意唔寫依賴陣列：每 render 重新掛一次，handlePeekEnd 就永遠係新嗰個，
+     唔會捉到舊 closure。掛／拆四個 listener 好平，唔值得為咗慳呢啲而
+     引入 stale closure 嘅風險。 */
+  useEffect(() => {
+    if (!peeking) return undefined;
+    const end = () => handlePeekEnd();
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    window.addEventListener('blur', end);
+    document.addEventListener('visibilitychange', end);
+    return () => {
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      window.removeEventListener('blur', end);
+      document.removeEventListener('visibilitychange', end);
+    };
+  });
+
   /* 睇圖（peek）：撳住即顯示完整原圖，一鬆手即收。
      不是 tap 開 / 再 tap 收的 toggle，也沒有自動計時。
      每一次「撳落 → 鬆手」算 1 次，不論中間按住多久。 */
@@ -433,7 +460,9 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
             onPointerUp={handlePeekEnd}
             onPointerLeave={handlePeekEnd}
             onPointerCancel={handlePeekEnd}
-            disabled={peeksLeft <= 0}
+            /* ⚠️ 睇緊嗰陣唔可以 disabled —— 撳落去 peeksLeft 就減到 0，
+               粒掣即刻停收事件，鬆手收唔到，overlay 會卡死。 */
+            disabled={peeksLeft <= 0 && !peeking}
             aria-label={t('game.peekAria')}
           >
             <img src="/icons/peek.png" alt="" />
