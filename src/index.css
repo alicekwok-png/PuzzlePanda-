@@ -118,6 +118,25 @@ html, body {
   height: 100%;
   background: var(--bg);
   overscroll-behavior: none;
+
+  /* ⚠️ iOS 長按任何圖都會彈出系統選單（「將圖片儲存到…／複製圖片／
+     開啟圖片／用 Google 搜尋圖片」）。拼圖塊同睇圖都係用
+     background-image，所以一長按就中招，兩個後果都好嚴重：
+       1. 拖拖下彈個 menu 出嚟，拖曳直接爛咗；
+       2. 玩家撳「開啟圖片」就見到成幅原圖 —— 等於免費無限睇圖，
+          「睇圖」呢個要扣配額嘅功能就形同虛設。
+     所以成個 App 關咗 callout 同文字選取。呢度冇任何要揀字或者要
+     長按複製嘅內容，關咗冇代價。 */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 同上：連圖片本身嘅長按選單同拖曳都要關 */
+img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 #root {
@@ -874,6 +893,7 @@ button:focus-visible,
   min-height: 0;
   background-repeat: no-repeat;
   touch-action: none;
+  -webkit-touch-callout: none;
   cursor: grab;
   z-index: 1;
   transition: box-shadow 0.25s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
@@ -1075,6 +1095,7 @@ button:focus-visible,
 }
 
 .peek-frame {
+  -webkit-touch-callout: none;
   width: auto;
   height: 100%;
   max-height: 78svh;
