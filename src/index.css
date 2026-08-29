@@ -718,16 +718,17 @@ button:focus-visible,
 }
 
 /* 接合瞬間的閃亮 */
+/* 四角閃光。用 inline SVG data URI 而唔係 emoji ——
+   emoji 會跟住系統字型變樣，三個平台畫出嚟完全唔同。 */
 .piece.is-just-bonded::before {
-  content: '✨';
+  content: '';
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(16px, 5vw, 28px);
+  inset: 22%;
   z-index: 6;
   pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff8e2' d='M12 2l2.1 6.4L20.5 12l-6.4 2.1L12 20.5l-2.1-6.4L3.5 12l6.4-2.1z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  filter: drop-shadow(0 0 5px rgba(255, 201, 77, 0.9));
   animation: sparkle 0.8s ease-out forwards;
 }
 
@@ -1430,7 +1431,34 @@ button:focus-visible,
   box-shadow: 0 1px 0 var(--drop-strong), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-.album-entry-btn .glyph { font-size: 17px; line-height: 1; }
+.album-entry-icon {
+  /* 呢個係彩色插畫（簿封面 + 三張熊貓貼紙），細過 30px 啲貼紙就糊晒，
+     所以要大過隔籬啲線稿圖示 */
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 3px rgba(4, 6, 16, 0.5));
+}
+
+/* 頂欄嗰個線稿 SVG：跟返隔籬幾個 icon 嘅大細同顏色 */
+.icon-btn-svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+  color: var(--text);
+  pointer-events: none;
+}
+
+.icon-btn.is-armed .icon-btn-svg { color: var(--surface); }
+
+/* 由遊戲畫面撳開時蓋喺上面，唔會令關卡 unmount */
+.album-screen.is-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  animation: fadeIn 0.18s ease;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .album-page,
@@ -1974,6 +2002,211 @@ button:focus-visible,
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+/* ==========================================================================
+   圖示尺寸
+   --------------------------------------------------------------------------
+   全部 SVG 圖示（src/components/Icon.jsx）都用 currentColor，所以顏色跟住
+   容器行，呢度只需要話佢知幾大。
+   ========================================================================== */
+.ui-icon {
+  display: block;
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+.icon-btn .ui-icon { width: 21px; height: 21px; }
+.video-sound-btn .ui-icon { width: 20px; height: 20px; }
+.album-pager-btn .ui-icon { width: 19px; height: 19px; }
+.album-viewer-close .ui-icon { width: 17px; height: 17px; }
+.tool-btn .ui-icon { width: 15px; height: 15px; }
+.restart-chip .ui-icon { width: 13px; height: 13px; }
+.settings-row-check .ui-icon { width: 15px; height: 15px; }
+.chapter-tile-lock .ui-icon { width: 26px; height: 26px; }
+.level-tile-number .ui-icon { width: 22px; height: 22px; }
+.level-tile-check .ui-icon { width: 12px; height: 12px; }
+
+.progress-knob .ui-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--gold-shadow);
+}
+
+/* ==========================================================================
+   遊戲感（唔好似網頁）
+   --------------------------------------------------------------------------
+   分別喺邊？網頁介面係「平面色塊 + 幼邊 + 柔和陰影」；手遊介面係
+   「厚身淺色描邊 + 硬投影 + 描邊字」。三樣加埋，同一個色板都會由
+   「網站」變成「App」。
+
+   ⚠️ 描邊色刻意用暖米白（唔係純白）—— 呢個 App 嘅色板係暖橘金系，
+   純白描邊會偏冷，同棋盤入面啲相打交。
+   ========================================================================== */
+:root {
+  --outline: rgba(253, 246, 232, 0.92);
+  --outline-soft: rgba(253, 246, 232, 0.34);
+}
+
+/* 描邊字：paint-order 令描邊畫喺字身後面，唔會食住字型輪廓。
+   手遊標題同掣上面嘅字基本上全部都係咁做。 */
+.game-text-stroke {
+  paint-order: stroke fill;
+  -webkit-text-stroke: 3px rgba(4, 6, 16, 0.5);
+}
+
+/* ---------- 底 ---------- */
+/* 平色底係「網頁感」最大嘅來源。加一層極淡嘅斜格紋同中心光，
+   個底就會有質感而唔會搶走內容。 */
+.screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 70% at 50% 0%, rgba(249, 130, 30, 0.13), transparent 70%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.022) 0 2px,
+      transparent 2px 9px
+    );
+}
+
+/* ---------- 主要掣 ---------- */
+.primary-btn {
+  border: 3px solid var(--outline);
+  box-shadow: 0 5px 0 var(--orange-shadow), 0 10px 18px rgba(4, 6, 16, 0.45);
+  text-shadow: 0 2px 0 rgba(4, 6, 16, 0.22);
+  letter-spacing: 0.02em;
+}
+
+.primary-btn:active {
+  box-shadow: 0 1px 0 var(--orange-shadow), 0 4px 9px rgba(4, 6, 16, 0.4);
+}
+
+.primary-btn.is-next {
+  box-shadow: 0 5px 0 var(--green-shadow), 0 10px 18px rgba(4, 6, 16, 0.45);
+}
+
+.primary-btn.is-next:active {
+  box-shadow: 0 1px 0 var(--green-shadow), 0 4px 9px rgba(4, 6, 16, 0.4);
+}
+
+.secondary-btn {
+  border: 2px solid var(--outline-soft);
+  text-shadow: 0 1px 0 rgba(4, 6, 16, 0.3);
+}
+
+/* ---------- 工具鍵 ---------- */
+.icon-btn {
+  border: 2px solid var(--outline-soft);
+}
+
+.icon-btn.is-armed {
+  border-color: var(--outline);
+}
+
+.album-entry-btn,
+.album-pager-btn {
+  border: 2px solid var(--outline-soft);
+  text-shadow: 0 1px 0 rgba(4, 6, 16, 0.3);
+}
+
+.tool-btn {
+  border: 2px solid var(--outline-soft);
+}
+
+/* ---------- 棋盤 ---------- */
+/* 參考稿嗰個黃色厚框：棋盤要有個實實在在嘅框，唔係一塊浮喺度嘅色塊。 */
+.board-mat {
+  border: 3px solid var(--outline-soft);
+}
+
+.board-mat.is-complete {
+  border-color: var(--outline);
+}
+
+/* ---------- 關卡 / 章節格 ---------- */
+.chapter-tile,
+.level-tile {
+  border: 3px solid var(--outline-soft);
+}
+
+.chapter-tile.is-complete {
+  border-color: var(--gold);
+  outline: none;
+}
+
+.chapter-tile-name,
+.level-tile-number {
+  paint-order: stroke fill;
+  -webkit-text-stroke: 3px rgba(4, 6, 16, 0.55);
+}
+
+.chapter-tile-lock,
+.level-tile.is-locked .level-tile-number {
+  color: var(--faint);
+  -webkit-text-stroke: 0;
+}
+
+/* ---------- 首頁 ---------- */
+.home-hero h1 {
+  paint-order: stroke fill;
+  -webkit-text-stroke: 5px rgba(4, 6, 16, 0.55);
+  text-shadow: 0 4px 0 rgba(4, 6, 16, 0.4);
+}
+
+.home-subtitle {
+  paint-order: stroke fill;
+  -webkit-text-stroke: 3px rgba(4, 6, 16, 0.5);
+}
+
+.home-logo {
+  border: 3px solid var(--outline);
+  box-shadow: 0 6px 0 rgba(4, 6, 16, 0.35), 0 12px 22px rgba(4, 6, 16, 0.5);
+}
+
+/* ---------- 頂欄 ---------- */
+.level-title {
+  paint-order: stroke fill;
+  -webkit-text-stroke: 3.5px rgba(4, 6, 16, 0.55);
+}
+
+.level-title .level-kicker {
+  -webkit-text-stroke: 2.5px rgba(4, 6, 16, 0.5);
+}
+
+/* ---------- 進度 ---------- */
+.progress-label,
+.progress-moves,
+.restart-chip {
+  border: 1.5px solid var(--outline-soft);
+}
+
+.progress-knob {
+  border: 2px solid var(--gold-shadow);
+}
+
+/* ---------- 連擊回饋 ---------- */
+.feedback-badge {
+  border: 3px solid var(--outline);
+  paint-order: stroke fill;
+}
+
+/* ---------- 過關結算 ---------- */
+.modal-stat {
+  border: 2px solid var(--outline-soft);
+}
+
+.modal-stat .v {
+  paint-order: stroke fill;
+  -webkit-text-stroke: 3px rgba(4, 6, 16, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen::before { display: block; }
 }
 
 /* ---------- 橫向（Landscape）---------- */

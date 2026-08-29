@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CHAPTERS, LEVELS } from '../game/levels';
 import { useI18n } from '../i18n/context';
 import { feedback } from '../services/feedback';
+import Icon from './Icon';
 
 /* ==========================================================================
    貼紙簿（Sticker Album）
@@ -82,7 +83,7 @@ function StickerViewer({ sticker, onClose }) {
       onClick={onClose}
     >
       <button type="button" className="album-viewer-close" aria-label={t('album.close')}>
-        ✕
+        <Icon name="close" className="icon-btn-svg" />
       </button>
       <img className="album-viewer-img" src={sticker.src} alt={sticker.label} />
       <p className="album-viewer-caption">{sticker.label}</p>
@@ -141,9 +142,30 @@ function AlbumPage({ chapter, progress, onOpenSticker }) {
 
 /* -------------------------------------------------------------------------
    ------------------------------------------------------------------------- */
-export default function AlbumScreen({ progress, onBack }) {
+/**
+ * @param initialChapterId 指定一開始揀邊頁。遊戲入面撳開會傳玩緊嗰章入嚟，
+ *   等玩家一開就見到同一個主題嘅貼紙；首頁入口唔傳，行預設（第一個未儲齊
+ *   嘅章）。
+ * @param isOverlay 蓋喺遊戲畫面上面咁開（position: fixed）。首頁入口係
+ *   獨立一版，唔使。
+ * @param backLabelKey 返回掣嘅 aria-label —— 由首頁入係「返回首頁」，
+ *   由遊戲入係「關閉」。
+ */
+export default function AlbumScreen({
+  progress,
+  onBack,
+  initialChapterId,
+  isOverlay = false,
+  backLabelKey = 'nav.backHome',
+}) {
   const t = useI18n().t;
-  const [page, setPage] = useState(() => initialPage(progress));
+  const [page, setPage] = useState(() => {
+    if (initialChapterId != null) {
+      const idx = CHAPTERS.findIndex((c) => c.id === initialChapterId);
+      if (idx >= 0) return idx;
+    }
+    return initialPage(progress);
+  });
   const [viewing, setViewing] = useState(null);
   const swipeRef = useRef(null);
 
@@ -172,9 +194,9 @@ export default function AlbumScreen({ progress, onBack }) {
   }
 
   return (
-    <div className="screen album-screen">
+    <div className={`screen album-screen${isOverlay ? ' is-overlay' : ''}`}>
       <div className="top-bar">
-        <button className="icon-btn" onClick={onBack} aria-label={t('nav.backHome')}>
+        <button className="icon-btn" onClick={onBack} aria-label={t(backLabelKey)}>
           <img src="/icons/back.png" alt="" />
         </button>
         <div className="level-title">
@@ -206,7 +228,7 @@ export default function AlbumScreen({ progress, onBack }) {
           disabled={page === 0}
           aria-label={t('album.prevPage')}
         >
-          ‹
+          <Icon name="chevronLeft" className="icon-btn-svg" />
         </button>
         <span className="album-pager-label">
           {page + 1} / {CHAPTERS.length}
@@ -218,7 +240,7 @@ export default function AlbumScreen({ progress, onBack }) {
           disabled={page === CHAPTERS.length - 1}
           aria-label={t('album.nextPage')}
         >
-          ›
+          <Icon name="chevronRight" className="icon-btn-svg" />
         </button>
       </div>
 

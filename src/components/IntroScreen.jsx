@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useVideoSound } from '../hooks/useVideoSound';
 import { useT } from '../i18n/context';
+import Icon from './Icon';
 import { feedback } from '../services/feedback';
 
 /* ==========================================================================
@@ -75,7 +76,7 @@ export default function IntroScreen({ onFinish }) {
         }}
         aria-label={muted ? t('video.soundOn') : t('video.soundOff')}
       >
-        {muted ? '🔇' : '🔊'}
+        <Icon name={muted ? 'soundOff' : 'soundOn'} className="icon-btn-svg" />
       </button>
 
       <button type="button" className="intro-skip" onClick={(e) => { e.stopPropagation(); skip(); }}>

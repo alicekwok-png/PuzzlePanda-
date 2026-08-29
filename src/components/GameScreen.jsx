@@ -13,11 +13,13 @@ import {
 } from '../game/engine';
 import { loadProgress, markLevelComplete } from '../game/storage';
 import { useT } from '../i18n/context';
-import { showInterstitialOnLevelWin, showRewarded } from '../services/ads';
+import { hideBanner, showBanner, showInterstitialOnLevelWin, showRewarded } from '../services/ads';
 import { isDevBuild } from '../services/devMode';
 import { feedback, preloadSfx } from '../services/feedback';
 import { CHAPTERS, LEVELS } from '../game/levels';
 import AdSlot from './AdSlot';
+import AlbumScreen from './AlbumScreen';
+import Icon from './Icon';
 import ChapterTransition from './ChapterTransition';
 import PuzzlePiece from './PuzzlePiece';
 import WinModal from './WinModal';
@@ -49,6 +51,11 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   const [peeking, setPeeking] = useState(false);
   const [peeksLeft, setPeeksLeft] = useState(level.peeks);
   const [bestMoves, setBestMoves] = useState(null);
+  /* 貼紙簿喺呢度做 overlay，唔行 App 嘅 setScreen('album')。
+     行 setScreen 會令成個 GameScreen unmount，board / history / moves /
+     hintsLeft 全部跌晒，返嚟個關卡就變咗重新開始。
+     非 null 即係開緊 —— 順便當 snapshot，每次撳開都讀返最新進度。 */
+  const [albumProgress, setAlbumProgress] = useState(null);
   /* 完成整章第 5 關（首次）才會設值，設咗就先播過渡片再入結算 */
   const [chapterDone, setChapterDone] = useState(null);
   const t = useT();
@@ -287,6 +294,19 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     commitBoard({ size: level.size, cells, placed: computePlaced(cells) });
   }
 
+  function openAlbum() {
+    feedback.tap();
+    /* 原生橫幅係浮喺 WebView 上面嘅 native view，唔會俾 overlay 蓋住，
+       所以要自己收起。App 嗰個 effect 只喺 screen 改變時行，唔會同呢度打交。 */
+    hideBanner();
+    setAlbumProgress(loadProgress());
+  }
+
+  function closeAlbum() {
+    setAlbumProgress(null);
+    showBanner();
+  }
+
   /** 提示用完時，讓玩家看一支獎勵式廣告換一次提示。 */
   async function handleEarnHint() {
     const watched = await showRewarded('extra-hint');
@@ -332,6 +352,28 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
             <span className="icon-btn-badge">{hintsLeft}</span>
           </button>
 
+          {/* 貼紙簿。⚠️ 用 inline SVG 線稿，唔用 emoji 都唔用彩色插畫 ——
+              要同隔籬 back / undo / hint / peek 嗰幾個單色線稿 icon 同一
+              家族。首頁嗰個入口先至用彩色插畫版（見 App.jsx）。 */}
+          <button className="icon-btn" onClick={openAlbum} aria-label={t('album.openAria')}>
+            <svg
+              className="icon-btn-svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              {/* 簿封面，右上角揭起 */}
+              <path d="M7 4h9l4 4v12H7z" />
+              <path d="M16 4v4h4" />
+              {/* 左邊環圈裝訂 */}
+              <path d="M3.6 7.4h5M3.6 12h5M3.6 16.6h5" />
+            </svg>
+          </button>
+
           {/* 睇圖：撳住先顯示，鬆手即收 —— 不是 toggle */}
           <button
             className="icon-btn"
@@ -365,7 +407,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
             className="progress-knob"
             style={{ left: `calc(12px + (100% - 24px) * ${progressPct} / 100)` }}
           >
-            ⭐
+            <Icon name="star" className="progress-knob-star" />
           </span>
         </div>
         <div className="progress-counts">
@@ -378,7 +420,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
           {/* 重新開始搬上嚟同兩粒藥丸排埋一行 —— 底部成條工具列因此可以
               收起，慳返嗰 47px 全部俾棋盤。 */}
           <button type="button" className="restart-chip" onClick={resetLevel}>
-            <span aria-hidden="true">⟲</span>
+            <Icon name="restart" className="restart-chip-icon" />
             {t('game.restart')}
           </button>
         </div>
@@ -437,7 +479,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
           <div className="game-foot">
             <div className="tool-dock">
               <button className="tool-btn" onClick={handleEarnHint}>
-                <span className="glyph">🎬</span>
+                <Icon name="video" className="tool-btn-icon" />
                 <span className="label">{t('game.watchAdForHint')}</span>
               </button>
             </div>
@@ -452,6 +494,17 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
         <button type="button" className="dev-btn dev-solve" onClick={devSolve}>
           DEV 即刻過關
         </button>
+      )}
+
+      {/* 直接開返呢一關所屬嗰章 —— 玩緊邊個主題就見到邊個主題嘅貼紙 */}
+      {albumProgress && (
+        <AlbumScreen
+          progress={albumProgress}
+          onBack={closeAlbum}
+          initialChapterId={level.chapterId}
+          isOverlay
+          backLabelKey="album.close"
+        />
       )}
 
       {peeking && (

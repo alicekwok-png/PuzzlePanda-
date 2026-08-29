@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AlbumScreen from './components/AlbumScreen';
+import Icon from './components/Icon';
 import GameScreen from './components/GameScreen';
 import IntroScreen from './components/IntroScreen';
 import LevelSelect from './components/LevelSelect';
@@ -84,7 +85,7 @@ export default function App() {
           }}
           aria-label={t('home.settingsAria')}
         >
-          ⚙
+          <Icon name="gear" className="icon-btn-svg" />
         </button>
 
         <div className="home-hero">
@@ -97,8 +98,11 @@ export default function App() {
           <button className="primary-btn big" onClick={goToLevels}>
             {t('home.startButton')}
           </button>
+          {/* 彩色插畫版 icon（design/icons/sticker-album-icon.png）。
+              遊戲頂欄嗰個入口用線稿 SVG，唔用呢張 —— 嗰行全部係單色
+              線稿，插畫擺埋去會好突兀。 */}
           <button type="button" className="album-entry-btn" onClick={goToAlbum}>
-            <span className="glyph" aria-hidden="true">📒</span>
+            <img className="album-entry-icon" src="/icons/album.webp" alt="" />
             {t('album.title')}
           </button>
         </div>
@@ -118,7 +122,7 @@ export default function App() {
                 setDevUnlock(next);
               }}
             >
-              {devUnlock ? `✓ 全 ${LEVELS.length} 關已解鎖` : '解鎖全部關卡'}
+              {devUnlock ? `全 ${LEVELS.length} 關已解鎖` : '解鎖全部關卡'}
             </button>
             <button
               type="button"

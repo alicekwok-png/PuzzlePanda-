@@ -17,6 +17,7 @@
   "levelSelect.collectionCount": "{{done}} / {{total}}",
   "levelSelect.chapterKicker": "Chapter {{n}}",
   "album.title": "Sticker Album",
+  "album.openAria": "Open sticker album",
   "album.count": "{{done}}/{{total}}",
   "album.stickerLabel": "{{chapterName}} sticker {{n}}",
   "album.locked": "Not collected yet",

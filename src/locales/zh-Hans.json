@@ -17,6 +17,7 @@
   "levelSelect.collectionCount": "{{done}} / {{total}} 张",
   "levelSelect.chapterKicker": "第 {{n}} 章",
   "album.title": "贴纸簿",
+  "album.openAria": "打开贴纸簿",
   "album.count": "{{done}}/{{total}}",
   "album.stickerLabel": "{{chapterName}} 第 {{n}} 张贴纸",
   "album.locked": "未收集",

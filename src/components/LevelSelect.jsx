@@ -4,6 +4,7 @@ import { useT } from '../i18n/context';
 import { AD_POLICY } from '../services/ads';
 import { feedback } from '../services/feedback';
 import AdSlot from './AdSlot';
+import Icon from './Icon';
 
 function chapterLevels(chapterId) {
   return LEVELS.filter((l) => l.chapterId === chapterId);
@@ -55,7 +56,9 @@ function ChapterGrid({ progress, onSelectChapter, onBack }) {
               }}
             >
               {locked ? (
-                <span className="chapter-tile-lock">🔒</span>
+                <span className="chapter-tile-lock">
+                  <Icon name="lock" />
+                </span>
               ) : (
                 <span className="chapter-tile-overlay">
                   {/* 只顯示當前語言的章節名，不再中英並列 */}
@@ -122,8 +125,14 @@ function LevelGrid({ chapter, progress, onSelectLevel, onBack }) {
                   {lvl.size}×{lvl.size}
                 </span>
               )}
-              <span className="level-tile-number">{locked ? '🔒' : lvl.levelInChapter}</span>
-              {completed && <span className="level-tile-check">✓</span>}
+              <span className="level-tile-number">
+                {locked ? <Icon name="lock" /> : lvl.levelInChapter}
+              </span>
+              {completed && (
+                <span className="level-tile-check">
+                  <Icon name="check" />
+                </span>
+              )}
             </button>
           );
         })}

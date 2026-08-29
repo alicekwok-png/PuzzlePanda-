@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useVideoSound } from '../hooks/useVideoSound';
 import { useT } from '../i18n/context';
+import Icon from './Icon';
 import { feedback } from '../services/feedback';
 
 /* ==========================================================================
@@ -71,7 +72,7 @@ export default function ChapterTransition({ chapter, onContinue }) {
         onClick={toggleSound}
         aria-label={muted ? t('video.soundOn') : t('video.soundOff')}
       >
-        {muted ? '🔇' : '🔊'}
+        <Icon name={muted ? 'soundOff' : 'soundOn'} className="icon-btn-svg" />
       </button>
 
       <div className={`transition-caption${ended ? ' is-shown' : ''}`}>

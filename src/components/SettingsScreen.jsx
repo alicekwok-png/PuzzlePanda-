@@ -3,6 +3,7 @@ import { useI18n } from '../i18n/context';
 import { LANGUAGES } from '../i18n/languages';
 import { feedback } from '../services/feedback';
 import AdSlot from './AdSlot';
+import Icon from './Icon';
 
 export default function SettingsScreen({ onBack }) {
   const { lang, changeLanguage, t } = useI18n();
@@ -42,7 +43,7 @@ export default function SettingsScreen({ onBack }) {
                   {option.label}
                 </span>
                 <span className="settings-row-check" aria-hidden="true">
-                  {selected ? '✓' : ''}
+                  {selected && <Icon name="check" />}
                 </span>
               </button>
             );
