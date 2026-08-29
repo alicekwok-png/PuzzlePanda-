@@ -33,9 +33,10 @@ const DRAG_DEADZONE_PX = 12;
 /* 進度條上面嘅里程碑。每個百分比對應 public/icons/milestone-<pct>.webp。
    未行到就灰灰哋，行到就著返色同彈一下。
 
-   ⚠️ 而家嗰三張係暫代圖，由第 2 章嘅熊貓貼紙裁出嚟（起步／中段／歡呼）。
-   設計交正式圖之後，同名覆蓋 public/icons/milestone-{25,50,75}.webp 就得，
-   呢度唔使改。要加減里程碑就改呢個陣列同埋落多幾張圖。 */
+   三張圖分別係：25 綁頭帶擰拳（起步加油）、50 向前撲一拳舉高（衝刺中）、
+   75 雙手舉高眼瞇埋（歡呼）。原圖喺 design/icons/，用
+   scripts/prepare_icons.py 處理成 public/icons/milestone-<pct>.webp。
+   要加減里程碑就改呢個陣列，同埋跑多次個 script 落多幾張圖。 */
 const MILESTONES = [25, 50, 75];
 
 export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) {

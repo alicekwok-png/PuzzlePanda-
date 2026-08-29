@@ -88,7 +88,7 @@
      試過改用 container query（100cqh）自動量，但 .board-wrap 嘅高度
      係由一連串 flex + min-height 得出，唔算 definite，cqh 會解成 0，
      棋盤直接縮成一點。所以維持手寫常數。 */
-  --chrome-h: 142px;
+  --chrome-h: 149px;
 
   --r-sm: 12px;
   --r-md: 16px;
@@ -522,8 +522,8 @@ button:focus-visible,
 .progress-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 5px 14px 4px;
+  gap: 7px;
+  padding: 8px 14px 4px;
   flex: none;
 }
 
@@ -554,8 +554,11 @@ button:focus-visible,
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 22px;
-  height: 22px;
+  /* 28px 唔會令成行高咗 —— 佢係 absolute，喺 14px 嘅軌道上下各溢出 7px，
+     只係比粒星星旋鈕（24px）多溢出 2px。細過呢個尺寸，熊貓嘅姿態就
+     完全讀唔到，得返「一嚿黑白嘢」。 */
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #2a2f5e;
   border: 2px solid rgba(253, 246, 232, 0.55);
@@ -572,7 +575,7 @@ button:focus-visible,
   height: 132%;
   object-fit: contain;
   /* 未行到：熄咗燈咁 */
-  filter: grayscale(1) brightness(0.55);
+  filter: grayscale(1) brightness(0.5) contrast(1.15);
   transition: filter 0.35s ease;
 }
 
