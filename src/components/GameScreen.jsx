@@ -5,6 +5,7 @@ import {
   bondsAt,
   computePlaced,
   connectedCluster,
+  applyHint,
   canMoveGroup,
   findHint,
   generateBoard,
@@ -146,10 +147,6 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   function handlePointerDown(e, position) {
     // 睇圖 overlay 顯示中就完全不接受棋盤操作（例如另一隻手指同時拖）
     if (won || peeking) return;
-    /* 已經黐咗嘅塊唔郁得 —— 黐咗即係已經喺自己屋企，冇理由再搬。
-       喺呢度就攔住，唔好等到放手先拒絕：手指一撳落去冇反應，玩家即刻
-       知呢啲係鎖死咗嘅，唔使估。 */
-    if (board.placed.has(position)) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     passedDeadzoneRef.current = false;
@@ -320,9 +317,10 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setHintsLeft((h) => h - 1);
     setHintsUsed((n) => n + 1);
     feedback.hint();
-    /* ⚠️ 一定要行 moveGroup，唔可以行 swapCells：提示搬嘅係成嚿黐好咗
-       嘅嘢，兩格交換會將佢拆散 —— 正正犯咗「黐咗唔拆得開」條規矩。 */
-    commitBoard(moveGroup(board, found.from, found.to));
+    /* ⚠️ 行 applyHint 唔行 moveGroup：提示搬嘅係成嚿黐好咗嘅嘢（所以
+       更加唔可以用兩格交換），而且要跳過 moveGroup 嗰個「唔好封死自己」
+       檢查 —— 提示係救命掣，撳完一定要有嘢發生。 */
+    commitBoard(applyHint(board, found.from, found.to));
   }
 
   /* ⚠️ 收 peek 嘅保險：只要 peeking 係 true，就喺 window 度聽鬆手。
