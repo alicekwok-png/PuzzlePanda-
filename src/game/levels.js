@@ -1,7 +1,9 @@
 // Level definitions: 10 chapters x 5 levels = 50 levels total.
 // Difficulty is controlled by grid `size` (an size x size sliding jigsaw)
 // and by `hints` (fewer hints available for later, harder levels).
-// Photos live in public/images/chapters/<chapterKey>-<levelInChapter>.jpg.
+// Photos live in public/images/chapters/<chapterKey>-<levelInChapter>.webp
+// （992×1586，5:8）。換相／加相用 scripts/prepare_photos.py，唔好自己手動
+// 擺檔 —— 個 script 會順手裁成 5:8、縮到標準尺寸同轉 WebP。
 
 // 章節名不再寫死在這裡。`key` 同時是圖片檔名前綴與 i18n key 的後半段，
 // 畫面上一律用 t(`chapters.${chapter.key}`) 取名，見 src/locales/*.json。
@@ -60,7 +62,7 @@ export const LEVELS = CHAPTERS.flatMap((chapter, chapterIndex) =>
       peeks: PEEKS_PER_LEVEL,
       theme: {
         id: `${chapter.key}-${levelInChapter}`,
-        background: `url('/images/chapters/${chapter.key}-${levelInChapter}.jpg')`,
+        background: `url('/images/chapters/${chapter.key}-${levelInChapter}.webp')`,
       },
       ...cfg,
     };

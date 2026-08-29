@@ -125,7 +125,9 @@ npm run cap:open:android   # 開 Android Studio
 把 `jigsaw-solitaire-src.zip` 那條分支的關卡內容，合併進上面的介面改版。
 
 **從 50 關分支取用：**
-- `public/images/chapters/` 50 張主題相（10 章 × 5 關，全部 1024×1024 正方，已驗證）
+- `public/images/chapters/` 50 張主題相（10 章 × 5 關，全部 992×1586 直向 5:8 WebP，
+  合共 13MB）。換相用 `python scripts/prepare_photos.py <圖> <關卡編號>`，會自動
+  置中裁成 5:8、縮到標準尺寸、轉 WebP 同刪走舊檔。
 - `src/game/levels.js` —— `CHAPTERS` 十章與 50 關生成、新的難度曲線（1 關 4×4 → 2-3 關 5×5 → 4-6 關 6×6 → 7 關起 7×7，第 13 關起提示由 2 次降為 1 次）
 - `design/50-level-photo-prompts.md`
 - `ads.js` 改用 plugin 的 `BannerAdSize` / `BannerAdPosition` enum（比字串字面值正確）

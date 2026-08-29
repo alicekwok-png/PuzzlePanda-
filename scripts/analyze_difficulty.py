@@ -76,7 +76,7 @@ def main():
         for slot in range(1, 6):
             level = (chapter - 1) * 5 + slot
             n = grid_size(level)
-            path = os.path.join(IMAGES, f'ch{chapter:02d}-{slot}.jpg')
+            path = os.path.join(IMAGES, f'ch{chapter:02d}-{slot}.webp')
             if not os.path.exists(path):
                 print(f'⚠️  缺檔：{path}')
                 continue
