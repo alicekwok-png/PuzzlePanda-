@@ -359,10 +359,15 @@ button:focus-visible,
   animation: pgPulse 1.6s ease-in-out infinite;
 }
 
+/* 彈窗版面跟設計交嘅 mockup：吉祥物徽章騎喺卡頂、標題、任務項、
+   虛線獎勵框、底部 CTA。 */
 .daily-card {
+  position: relative;
   width: 100%;
-  max-width: 330px;
-  padding: 22px 20px 20px;
+  max-width: 340px;
+  /* 上邊留位俾隻騎住嘅吉祥物 */
+  margin-top: 36px;
+  padding: 46px 18px 18px;
   border-radius: var(--r-xl);
   background: var(--surface);
   border: 2px solid var(--outline-soft);
@@ -371,84 +376,135 @@ button:focus-visible,
   animation: modalIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.daily-lock-art {
-  width: 62px;
-  height: 62px;
-  margin: 12px auto 4px;
-  border-radius: 50%;
-  background: rgba(4, 6, 16, 0.32);
-  border: 2px dashed var(--line-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--faint);
+.daily-badge {
+  position: absolute;
+  top: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 78px;
+  height: 78px;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 8px rgba(4, 6, 16, 0.55));
 }
 
-.daily-lock-art .ui-icon { width: 28px; height: 28px; }
-
-/* 今日任務本身 —— 成張卡最重要嗰句，所以字最大 */
-.daily-task {
+.daily-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--dim);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin: 10px 0 14px;
-  padding: 12px 14px;
-  border-radius: var(--r-md);
-  background: rgba(4, 6, 16, 0.28);
-  border: 2px solid var(--outline-soft);
+}
+
+.daily-close .ui-icon { width: 13px; height: 13px; }
+
+.daily-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 0 0 14px;
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 16px;
-  line-height: 1.4;
+  font-size: 20px;
+  font-weight: 800;
   color: var(--text);
-  text-wrap: balance;
 }
 
-.daily-task.is-done {
+.daily-heading-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+/* 任務項同獎勵項共用同一個橫列造型 */
+.daily-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 10px;
+  padding: 11px 12px;
+  border-radius: var(--r-md);
+  background: rgba(4, 6, 16, 0.3);
+  border: 2px solid var(--outline-soft);
+  text-align: left;
+}
+
+/* 獎勵框用虛線，同「要做嘅嘢」分開讀 */
+.daily-row.is-reward {
+  border-style: dashed;
+  border-color: rgba(255, 201, 77, 0.55);
+  background: rgba(255, 201, 77, 0.08);
+  margin-bottom: 18px;
+}
+
+.daily-row.is-done {
   border-color: var(--teal);
-  color: var(--teal);
+  background: rgba(47, 182, 168, 0.12);
 }
 
-.daily-check {
+.daily-row-icon {
   flex: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--teal);
-  color: #fff;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: rgba(4, 6, 16, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.daily-check .ui-icon { width: 11px; height: 11px; }
+.daily-row-icon img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
 
-.daily-reward {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 auto 12px;
-  padding: 5px 14px;
-  border-radius: 999px;
-  background: linear-gradient(145deg, #ffd873, var(--accent-gold));
-  border: 2px solid var(--outline);
-  box-shadow: 0 3px 0 var(--gold-shadow);
+.daily-row-icon.is-locked { color: var(--faint); }
+.daily-row-icon.is-locked .ui-icon { width: 20px; height: 20px; }
+
+.daily-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.daily-row-text b {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.daily-row.is-reward .daily-row-text b { color: var(--gold); }
+.daily-row.is-done .daily-row-text b { color: var(--teal); }
+
+.daily-row-text small {
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.4;
+}
+
+.daily-row-count {
+  flex: none;
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 13px;
-  color: var(--surface);
-}
-
-.daily-reward-icon { width: 15px; height: 15px; }
-
-.daily-body {
-  margin: 0 0 18px;
-  font-size: 13px;
-  line-height: 1.6;
   color: var(--dim);
-  text-wrap: balance;
+  font-variant-numeric: tabular-nums;
 }
+
+.daily-row.is-done .daily-row-count { color: var(--teal); }
+
+.daily-cta { width: 100%; }
 
 /* ---------- 開發者列（只在 dev build 出現）----------
    刻意做成一望而知是內部工具的樣子，免得被誤認成產品 UI。 */

@@ -59,6 +59,22 @@ Alice攞咗參考app（Jigsawcard Solitaire）嘅screenshot，見到佢哋首頁
 - Bonus hint會自動加落玩家下一關嘅初始`hintsLeft`，用完即銷，冇新增任何貨幣/資源UI。
 - 完全冇改動現有`completed`/`bestMoves`嘅寫入邏輯同意思。
 
+## 2026-08-29更新（追加）：每日任務彈窗UI + icon清單（跟Alice提供嘅mockup）
+
+Alice提供咗實際嘅彈窗設計mockup，版面：置頂一個圓形吉祥物徽章（帶puzzle-piece鋸齒邊框）、「每日任務」標題、任務項（icon+文字「完成任何一關」+進度「0/1」）、獎勵提示（虛線框，icon+文字「獎勵：額外1次提示」+「做到就自動攞獎」）、底部CTA掣「知道喇」。
+
+**要求：mockup入面嘅emoji（📅日曆／✅勾選／💡燈泡／🐼熊貓)全部要換做真實插畫icon**，跟返成個project「唔用emoji做UI icon」嘅原則（同`sticker-album-spec.md`已經記低嗰條一致）。
+
+**需要嘅新icon（4個，全部透明底PNG，image prompt已經直接俾咗Alice喺chat度，佢自己生成，Claude Code唔使再另外諗圖）：**
+1. 每日任務吉祥物徽章——置頂嗰個圓形panda，帶puzzle-piece鋸齒邊框，取代🐼。
+2. 月曆icon——「每日任務」標題前面同home screen嘅entry icon共用，取代📅。
+3. 任務完成勾選icon——任務項嗰個，取代✅。
+4. 獎勵/hint icon——獎勵提示嗰個，取代💡。
+
+**驗收標準（呢部分）：**
+- Modal入面4個emoji全部換成上面嘅插畫icon，冇殘留emoji字符。
+- 版面結構（吉祥物徽章置頂、標題、任務項、虛線獎勵框、CTA掣）跟返Alice提供嘅mockup排位，唔使另外自行設計版面。
+
 ## 明確唔喺呢次scope入面（parked）
 - 連續登入streak顯示/獎勵——今次唔做，淨係做單日任務。
 - 金幣/花瓣等新貨幣系統——維持`ui-design-system-spec.md`原本嘅parked決定，唔喺呢次reopen。
