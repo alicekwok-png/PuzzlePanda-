@@ -5,12 +5,12 @@ import {
   bondsAt,
   computePlaced,
   connectedCluster,
+  canMoveGroup,
   findHint,
   generateBoard,
   isSolved,
   moveGroup,
   solvedBoard,
-  swapCells,
 } from '../game/engine';
 import { claimDailyMission, consumeBonusHints, loadProgress, markLevelComplete } from '../game/storage';
 import { ensureTodayMission, isMissionSatisfied, isUnlocked } from '../game/dailyMission';
@@ -26,7 +26,6 @@ import ChapterTransition from './ChapterTransition';
 import PuzzlePiece from './PuzzlePiece';
 import WinModal from './WinModal';
 
-const MAX_HISTORY = 30;
 /* 存 key 不存文字 —— 連擊字樣要能跟著語言切換 */
 const COMBO_TIER_KEYS = ['game.comboTier1', 'game.comboTier2', 'game.comboTier3'];
 /** 拖曳判定死區：手指微抖不該被當成一次拖曳。 */
@@ -53,7 +52,6 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   const [board, setBoard] = useState(() =>
     initiallyDone ? solvedBoard(level.size) : generateBoard(level.size),
   );
-  const [history, setHistory] = useState([]);
   const [moves, setMoves] = useState(0);
   /* 做完每日任務攞到嘅額外提示，開關嗰陣一次過加落嚟然後清零（用完即銷）。
      ⚠️ 淨係喺真係要玩嗰陣先攞。入去睇返完整幅相唔應該食咗人哋個獎勵
@@ -82,7 +80,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   const [peeksLeft, setPeeksLeft] = useState(level.peeks);
   const [bestMoves, setBestMoves] = useState(null);
   /* 貼紙簿喺呢度做 overlay，唔行 App 嘅 setScreen('album')。
-     行 setScreen 會令成個 GameScreen unmount，board / history / moves /
+     行 setScreen 會令成個 GameScreen unmount，board / moves /
      hintsLeft 全部跌晒，返嚟個關卡就變咗重新開始。
      非 null 即係開緊 —— 順便當 snapshot，每次撳開都讀返最新進度。 */
   const [albumProgress, setAlbumProgress] = useState(null);
@@ -119,7 +117,6 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
    *  —— 開關嗰陣攞過嘅唔會再攞多次。 */
   function resetLevel(bonus = bonusHints) {
     setBoard(generateBoard(level.size));
-    setHistory([]);
     setMoves(0);
     setHintsLeft(level.hints + bonus);
     setHintsUsed(0);
@@ -137,18 +134,6 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setChapterDone(null);
   }
 
-  function pushHistory(currentBoard) {
-    setHistory((h) => [...h, [...currentBoard.cells]].slice(-MAX_HISTORY));
-  }
-
-  function handleUndo() {
-    if (history.length === 0 || won) return;
-    feedback.undo();
-    const prevCells = history[history.length - 1];
-    setBoard({ size: level.size, cells: prevCells, placed: computePlaced(prevCells) });
-    setHistory((h) => h.slice(0, -1));
-  }
-
   /** 由畫面座標換算棋盤格 index。所有輸入都先轉成格座標，邏輯不碰像素。 */
   function posFromClient(clientX, clientY) {
     const rect = boardRef.current?.getBoundingClientRect();
@@ -161,6 +146,10 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   function handlePointerDown(e, position) {
     // 睇圖 overlay 顯示中就完全不接受棋盤操作（例如另一隻手指同時拖）
     if (won || peeking) return;
+    /* 已經黐咗嘅塊唔郁得 —— 黐咗即係已經喺自己屋企，冇理由再搬。
+       喺呢度就攔住，唔好等到放手先拒絕：手指一撳落去冇反應，玩家即刻
+       知呢啲係鎖死咗嘅，唔使估。 */
+    if (board.placed.has(position)) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     passedDeadzoneRef.current = false;
@@ -186,9 +175,15 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setDropCells(previewDestination(posFromClient(e.clientX, e.clientY)));
   }
 
-  /** 預覽這一嚿會落在哪幾格；出界就回傳空集合（一格都唔亮）。 */
+  /**
+   * 預覽這一嚿會落在哪幾格；出界或者放唔落就回傳空集合（一格都唔亮）。
+   *
+   * 「放唔落」＝呢步會拆散人哋已經黐好咗嘅嘢。唔亮落點就係話畀玩家聽
+   * 呢度放唔得 —— 唔使另外出錯誤訊息。
+   */
   function previewDestination(target) {
     if (target == null || dragGroup.size === 0) return new Set();
+    if (!canMoveGroup(board, draggingPos, target)) return new Set();
     const size = board.size;
     const dRow = Math.floor(target / size) - Math.floor(draggingPos / size);
     const dCol = (target % size) - (draggingPos % size);
@@ -226,11 +221,10 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   }
 
   /**
-   * 落子後的統一處理：存歷史、記步數、判斷有沒有新歸位，然後放特效與音效。
+   * 落子後的統一處理：記步數、判斷有沒有新歸位，然後放特效與音效。
    * 手動拖曳與「提示」都走這裡，所以兩邊的回饋完全一致。
    */
   function commitBoard(newBoard) {
-    pushHistory(board);
     setBoard(newBoard);
     setMoves((m) => m + 1);
 
@@ -326,7 +320,9 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setHintsLeft((h) => h - 1);
     setHintsUsed((n) => n + 1);
     feedback.hint();
-    commitBoard(swapCells(board, found.from, found.to));
+    /* ⚠️ 一定要行 moveGroup，唔可以行 swapCells：提示搬嘅係成嚿黐好咗
+       嘅嘢，兩格交換會將佢拆散 —— 正正犯咗「黐咗唔拆得開」條規矩。 */
+    commitBoard(moveGroup(board, found.from, found.to));
   }
 
   /* ⚠️ 收 peek 嘅保險：只要 peeking 係 true，就喺 window 度聽鬆手。
@@ -409,11 +405,10 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
 
       <div className="top-bar">
         <button className="icon-btn" onClick={onExit} aria-label={t('nav.backToLevelSelect')}>
-          <img src="/icons/back.png" alt="" />
+          <img src="/icons/back.webp" alt="" />
         </button>
-        {/* 進度條由自己一行搬咗上嚟，坐喺原本擺關卡名嗰個位。
-            關卡名／格數／交換次數全部拎走 —— 玩緊嗰陣唔需要，
-            過關結算度全部都有。 */}
+        {/* 關卡名／格數／交換次數全部拎走 —— 玩緊嗰陣唔需要，過關結算
+            度全部都有。進度條喺頂欄下面自己一行（見 .progress-row）。 */}
         {/* 睇返完整幅相嗰陣冇進度可言，個位攞返嚟擺關卡名。 */}
         {reviewing && (
           <div className="level-title">
@@ -424,8 +419,58 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
           </div>
         )}
 
-        {!reviewing && (
-        <div className="top-bar-progress">
+        <div className="top-bar-actions">
+          {/* 睇返完整幅相嗰陣，復原／重新開始／提示／睇圖全部冇意義，
+              淨係留返貼紙簿。 */}
+          {!reviewing && (
+          <>
+          {/* 仲有次數就著金色 —— 設計用顏色分「有得用 / 用晒」，
+              比單靠數字徽章一眼睇得清 */}
+          <button
+            className={`icon-btn${hintsLeft > 0 ? ' is-armed' : ''}`}
+            onClick={handleHint}
+            disabled={hintsLeft <= 0}
+            aria-label={t('game.hint')}
+          >
+            <img src="/icons/hint-bulb.webp" alt="" />
+            <span className="icon-btn-badge">{hintsLeft}</span>
+          </button>
+
+          </>
+          )}
+
+          {/* 貼紙簿。用彩色插畫版，同首頁入口一致 —— Alice 話線稿版
+              喺呢個尺寸太細睇唔清。 */}
+          <button className="icon-btn" onClick={openAlbum} aria-label={t('album.openAria')}>
+            <img src="/icons/album.webp" alt="" />
+          </button>
+
+          {/* 睇圖：撳住先顯示，鬆手即收 —— 不是 toggle */}
+          {!reviewing && (
+          <button
+            className="icon-btn"
+            onPointerDown={handlePeekStart}
+            onPointerUp={handlePeekEnd}
+            onPointerLeave={handlePeekEnd}
+            onPointerCancel={handlePeekEnd}
+            /* ⚠️ 睇緊嗰陣唔可以 disabled —— 撳落去 peeksLeft 就減到 0，
+               粒掣即刻停收事件，鬆手收唔到，overlay 會卡死。 */
+            disabled={peeksLeft <= 0 && !peeking}
+            aria-label={t('game.peekAria')}
+          >
+            <img src="/icons/peek.webp" alt="" />
+            <span className="icon-btn-badge is-peek">{peeksLeft}</span>
+          </button>
+          )}
+        </div>
+      </div>
+
+      {/* 進度條自己一行，唔再擠喺頂欄入面 —— Alice 要熊仔同軌道大啲，
+          頂欄嗰行冇位再塞。⚠️ 呢一行嘅高度計咗入 --chrome-h，改高度就要
+          一齊改嗰個常數，唔係棋盤會計錯闊度／廣告條會俾頂出畫面。 */}
+      {!reviewing && (
+        <div className="progress-row">
+
           <div
             className="progress-bar-track"
             role="progressbar"
@@ -458,85 +503,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
             <b>{bonded}</b>/{totalBonds}
           </p>
         </div>
-        )}
-        <div className="top-bar-actions">
-          {/* 睇返完整幅相嗰陣，復原／重新開始／提示／睇圖全部冇意義，
-              淨係留返貼紙簿。 */}
-          {!reviewing && (
-          <>
-          <button
-            className="icon-btn"
-            onClick={handleUndo}
-            disabled={history.length === 0}
-            aria-label={t('game.undo')}
-          >
-            <img src="/icons/undo.png" alt="" />
-          </button>
-
-          {/* 重新開始。⚠️ 一定要用同「復原」完全唔同輪廓嘅圖示 ——
-              兩個都用圓圈箭嘴嘅話玩家會當佢哋係同一樣嘢。
-              擺喺復原隔籬（兩個都係「返轉頭」類），刻意唔擺最右
-              —— 最右最易撳到，而重新開始係唔可以 undo 嘅。 */}
-          <button className="icon-btn" onClick={() => resetLevel()} aria-label={t('game.restart')}>
-            <Icon name="shuffle" className="icon-btn-svg" />
-          </button>
-
-          {/* 仲有次數就著金色 —— 設計用顏色分「有得用 / 用晒」，
-              比單靠數字徽章一眼睇得清 */}
-          <button
-            className={`icon-btn${hintsLeft > 0 ? ' is-armed' : ''}`}
-            onClick={handleHint}
-            disabled={hintsLeft <= 0}
-            aria-label={t('game.hint')}
-          >
-            <img src="/icons/hint.png" alt="" />
-            <span className="icon-btn-badge">{hintsLeft}</span>
-          </button>
-
-          </>
-          )}
-
-          {/* 貼紙簿。⚠️ 用 inline SVG 線稿，唔用 emoji 都唔用彩色插畫 ——
-              要同隔籬 back / undo / hint / peek 嗰幾個單色線稿 icon 同一
-              家族。首頁嗰個入口先至用彩色插畫版（見 App.jsx）。 */}
-          <button className="icon-btn" onClick={openAlbum} aria-label={t('album.openAria')}>
-            <svg
-              className="icon-btn-svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              {/* 簿封面，右上角揭起 */}
-              <path d="M7 4h9l4 4v12H7z" />
-              <path d="M16 4v4h4" />
-              {/* 左邊環圈裝訂 */}
-              <path d="M3.6 7.4h5M3.6 12h5M3.6 16.6h5" />
-            </svg>
-          </button>
-
-          {/* 睇圖：撳住先顯示，鬆手即收 —— 不是 toggle */}
-          {!reviewing && (
-          <button
-            className="icon-btn"
-            onPointerDown={handlePeekStart}
-            onPointerUp={handlePeekEnd}
-            onPointerLeave={handlePeekEnd}
-            onPointerCancel={handlePeekEnd}
-            /* ⚠️ 睇緊嗰陣唔可以 disabled —— 撳落去 peeksLeft 就減到 0，
-               粒掣即刻停收事件，鬆手收唔到，overlay 會卡死。 */
-            disabled={peeksLeft <= 0 && !peeking}
-            aria-label={t('game.peekAria')}
-          >
-            <img src="/icons/peek.png" alt="" />
-            <span className="icon-btn-badge is-peek">{peeksLeft}</span>
-          </button>
-          )}
-        </div>
-      </div>
+      )}
 
       <div className={`game-body${!reviewing && hintsLeft <= 0 ? ' has-dock' : ''}`}>
         <div className="board-wrap">

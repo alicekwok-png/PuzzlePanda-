@@ -82,15 +82,17 @@
   /* 棋盤上下所有嘢嘅總高度，用嚟反推棋盤最闊可以去到幾多。
      ⚠️ 改頂欄／進度列／廣告條嘅高度就要一齊改呢個數，否則棋盤會
      細過應有嘅尺寸（睇落就係「棋盤好窄」）。
-     現值 100 = 瀏覽器實測：頂欄 44 + 廣告條 50 = 94，再留返幾格位。
-     （進度列已經冇咗 —— 進度條搬咗入頂欄，所以由 149 減到 100，
-     棋盤即刻闊咗成 30px。）
+     現值 174 = 頂欄 68（掣 50 + 上下邊距 18）+ 進度行 62（軌道 18 +
+     gap 14 + 數字 14 + 上下邊距 16）+ 廣告條 50 = 180，減返棋盤外框
+     padding 換算落闊度嘅差額 6。
+     ⚠️ 掣放大、進度條搬出嚟自己一行之後呢個數大咗好多。唔跟住加嘅話
+     棋盤會計大咗撞落廣告條度。
      改完一定要喺幾個尺寸度量返棋盤有冇溢出（.board-mat 高度唔可以
      大過 .board-wrap）。
      試過改用 container query（100cqh）自動量，但 .board-wrap 嘅高度
      係由一連串 flex + min-height 得出，唔算 definite，cqh 會解成 0，
      棋盤直接縮成一點。所以維持手寫常數。 */
-  --chrome-h: 100px;
+  --chrome-h: 174px;
 
   --r-sm: 12px;
   --r-md: 16px;
@@ -741,6 +743,20 @@ button:focus-visible,
   box-shadow: 0 1px 0 var(--gold-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
+/* 提示鍵：彩色燈膽插畫。用晒就熄燈（去色 + 壓暗），唔用金色底做狀態
+   —— 個燈膽本身金黃，襯金底會金撞金。 */
+.hint-btn img {
+  transition: filter 0.25s ease;
+}
+
+.hint-btn:disabled img {
+  filter: grayscale(1) brightness(0.6);
+}
+
+.hint-btn:not(:disabled) img {
+  filter: drop-shadow(0 0 5px rgba(255, 201, 77, 0.55));
+}
+
 /* 貼紙式計數徽章：疊在右上角、外框用底色描一圈 */
 .icon-btn-badge {
   position: absolute;
@@ -774,49 +790,60 @@ button:focus-visible,
    進度條坐喺頂欄中間，原本擺關卡名嗰個位。關卡名／格數／交換次數／
    重新開始全部拎走 —— 玩緊嗰陣唔需要（交換次數過關結算度有，重新開始
    結算度有「再玩一次」），而且成條進度行慳返，全部俾咗棋盤。 */
-.top-bar-progress {
-  flex: 1;
-  min-width: 0;
+/* 進度條自己一行，唔再擠喺頂欄。⚠️ 擠喺頂欄嗰陣同 4 粒 50px 嘅掣爭位，
+   條 bar 得 149px，三隻里程碑熊貓中心距離只有 37px —— 想放大過 32px
+   就會黐埋。自己一行就有成個闊度，熊貓可以做到 40px。 */
+.progress-row {
+  flex: none;
   display: flex;
   flex-direction: column;
-  /* 里程碑坐喺 14px 軌道上，上下各溢出 (26-14)/2 = 6px。呢個 gap 要大過
-     6，否則啲熊貓會壓住下面個數字。 */
-  gap: 11px;
-  padding: 0 6px;
+  /* 里程碑坐喺軌道上，上下各溢出 (40-18)/2 = 11px。呢個 gap 要大過 11，
+     否則啲熊貓會壓住下面個數字。 */
+  gap: 14px;
+  padding: 10px 20px 6px;
 }
 
-/* 遊戲頂欄要塞 5 個掣 + 一條進度條。掣收細到 36px、間距收窄，
-   先夠位俾進度條 —— 條 bar 短過 160px 嘅話，三隻里程碑熊貓就會黐埋
-   一齊，睇唔到邊隻係邊隻。 */
-/* ⚠️ 一定要用 `>`：貼紙簿係 render 喺 .game-screen 入面嘅 overlay，
+/* 遊戲頂欄。拆走咗「復原」同「重新開始」之後淨返 4 粒掣（返回／提示／
+   貼紙簿／睇圖），慳返嗰兩個位全部用嚟放大 icon。
+   ⚠️ 上邊留 12px —— 條進度條之前貼到個頂邊實，睇落好侷促。
+   ⚠️ 一定要用 `>`：貼紙簿係 render 喺 .game-screen 入面嘅 overlay，
    佢自己都有條 .top-bar。唔限死直屬子元素嘅話，呢啲收窄規則會漏埋落
    貼紙簿嗰條頂欄度。 */
 .game-screen > .top-bar {
-  padding: 5px 8px 3px;
-  gap: 6px;
+  padding: 12px 8px 6px;
+  gap: 8px;
 }
 
-/* 5 個工具鍵 + 返回 + 一條進度條要塞喺同一行。34px 係下限 ——
-   再細觸控目標就唔夠，再大條 bar 就短過 140px，三隻里程碑熊貓會黐埋。 */
+/* 4 粒掣 + 一條進度條。50px 係喺「icon 睇得清」同「條 bar 唔好短過
+   130px（短過就三隻里程碑熊貓黐埋）」之間嘅平衡點。 */
 .game-screen > .top-bar .icon-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
+  width: 50px;
+  height: 50px;
+  border-radius: 17px;
 }
 
 .game-screen > .top-bar .icon-btn img,
 .game-screen > .top-bar .icon-btn .ui-icon,
 .game-screen > .top-bar .icon-btn .icon-btn-svg {
-  width: 18px;
-  height: 18px;
+  width: 27px;
+  height: 27px;
 }
 
-.game-screen > .top-bar .top-bar-actions { gap: 3px; }
+/* 掣大咗，徽章都要跟住大，否則數字細到睇唔到 */
+.game-screen > .top-bar .icon-btn-badge {
+  min-width: 20px;
+  height: 20px;
+  font-size: 11px;
+  top: -4px;
+  right: -4px;
+}
+
+.game-screen > .top-bar .top-bar-actions { gap: 6px; }
 
 .progress-bar-track {
   position: relative;
   width: 100%;
-  height: 14px;
+  height: 18px;
   background: rgba(4, 6, 16, 0.28);
   border-radius: 999px;
   box-shadow: inset 0 2px 3px rgba(4, 6, 16, 0.3);
@@ -837,10 +864,9 @@ button:focus-visible,
   text-align: center;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 10.5px;
+  font-size: 14px;
   line-height: 1;
-  letter-spacing: -0.01em;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.92);
   font-variant-numeric: tabular-nums;
   paint-order: stroke fill;
   -webkit-text-stroke: 2.5px rgba(4, 6, 16, 0.5);
@@ -853,10 +879,10 @@ button:focus-visible,
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  /* 26px：頂欄嗰條 bar 得百六 px，再大三隻熊貓就會黐埋一齊；
-     再細過呢個尺寸，三個姿態就分唔到，得返「一嚿黑白嘢」。 */
-  width: 26px;
-  height: 26px;
+  /* 自己一行之後有成個闊度，熊貓可以做到 40px —— 三個姿態（綁頭帶／
+     舉手歡呼／跳躍）而家一眼分得出。 */
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: #2a2f5e;
   border: 2px solid rgba(253, 246, 232, 0.55);
@@ -898,8 +924,8 @@ button:focus-visible,
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 22px;
-  height: 22px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: #fff;
   border: 2px solid var(--gold-shadow);
@@ -908,34 +934,6 @@ button:focus-visible,
   align-items: center;
   justify-content: center;
   transition: left 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* ---------- 窄機：進度條自動落第二行 ----------
-   6 個掣（返回／復原／重新開始／提示／貼紙簿／睇圖）加一條進度條，
-   喺窄畫面塞唔落同一行。實測條 bar 嘅闊度同三隻里程碑熊貓之間嘅空隙：
-     430px → bar 174，空隙 18   ✅
-     393px → bar 137，空隙 8    ✅ 迫但唔重疊
-     375px → bar 119，空隙 3    ❌
-     360px → bar 104，空隙 0    ❌ 啱啱好貼住
-     320px → bar  64，空隙 -10  ❌ 直情疊住
-
-   所以斷點揀 389px：393 以上維持一行（棋盤 89%），375 以下就用
-   flex-wrap 令進度條自己落一行攤到成個闊度（熊貓之間有 50–67px 位）。
-
-   ⚠️ 斷點唔好調高過 389 —— 393px（iPhone 14/15/16 Pro）一落第二行，
-   棋盤即刻由 89% 跌到 83%，而嗰 8px 空隙其實夠用。
-   ⚠️ 落咗第二行就高咗，所以 --chrome-h 要一齊調，否則棋盤會計錯尺寸
-   撞到廣告條。 */
-@media (max-width: 389px) {
-  :root { --chrome-h: 134px; }
-
-  .game-screen > .top-bar { flex-wrap: wrap; }
-
-  .top-bar-progress {
-    order: 3;
-    flex: 1 0 100%;
-    padding: 4px 2px 0;
-  }
 }
 
 /* ---------- 棋盤區 ---------- */
@@ -2504,8 +2502,8 @@ button:focus-visible,
 .chapter-tile-lock .ui-icon { width: 26px; height: 26px; }
 
 .progress-knob .ui-icon {
-  width: 14px;
-  height: 14px;
+  width: 19px;
+  height: 19px;
   color: var(--gold-shadow);
 }
 
@@ -2761,14 +2759,16 @@ button:focus-visible,
 
   .game-body .board-wrap { padding: 0; }
 
-  /* 橫向嘅 chrome：頂欄 44 + 廣告條 50 + game-body 下邊 6 = 100，
-     取 106 留返幾格位。呢個數唔啱嘅話廣告條會俾頂出畫面外。
+  /* 橫向嘅 chrome：頂欄 68 + 進度行 62 + 廣告條 50 + game-body 下邊 6
+     = 186，減返棋盤外框換算差額 6 → 180。
+     ⚠️ 呢個數同上面嘅 --chrome-h 要一齊維護 —— 掣放大同進度條搬出嚟
+     自己一行之後兩個都大咗，漏改就會頂到廣告條出畫面外。
      5:8 直向棋盤喺橫向手機上本來就好細 —— 見 README 嘅鎖直向建議。 */
-  .board-mat { max-width: min(100%, calc((100svh - 106px) * 0.625)); }
+  .board-mat { max-width: min(100%, calc((100svh - 180px) * 0.625)); }
 
   .game-body.has-dock .board-mat {
     /* 橫向嗰陣工具列係擺喺右邊，唔食高度，所以唔使再扣 */
-    max-width: min(100%, calc((100svh - 106px) * 0.625));
+    max-width: min(100%, calc((100svh - 180px) * 0.625));
   }
 
   .game-body .game-foot { width: 132px; flex: none; justify-content: center; }

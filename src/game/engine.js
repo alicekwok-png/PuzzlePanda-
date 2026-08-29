@@ -45,18 +45,29 @@ export function computePlaced(cells) {
    接合判斷
    --------------------------------------------------------------------------- */
 
-/** 第 i 格與它右邊那格是否接合。 */
+/* ── 點解係「砌啱位先黐」而唔係「相對啱就黐」──────────────────────
+   舊版係相對接合：兩塊喺棋盤上撠住、喺原圖又係鄰居，就當黐咗。咁樣可以
+   喺棋盤中間隨處砌起一嚿，再成嚿搬去啱嘅位。
+
+   但 Alice 要求「黐咗就永遠拆唔開」。喺相對接合底下呢個要求同「棋盤填
+   滿冇空位」正面衝突：你放一塊落去一定要頂走另一塊，而砌到一半之後你郁
+   邊度都會壓到人哋一嚿嘅半邊 —— 實測接合去到 50% 之後，得返 3.6% 嘅拖
+   曳仲放得落，提示真正黐到嘢嘅比例由 94% 跌到 9%。
+
+   改成絕對接合就一次過解決：黐咗＝已經喺自己屋企，根本冇理由再郁佢。
+   「唔拆得開」變成免費，而且散片之間永遠換得，所以永遠有得郁、永遠砌得
+   完 —— 唔使靠任何死局檢查。 */
+
+/** 第 i 格與它右邊那格是否接合（兩邊都要已經歸位）。 */
 export function bondedRight(cells, size, i) {
   if (i % size === size - 1) return false; // 棋盤上已經在最右一列
-  const a = cells[i];
-  if (a % size === size - 1) return false; // 這塊在原圖上已經在最右一列
-  return cells[i + 1] === a + 1;
+  return cells[i] === i && cells[i + 1] === i + 1;
 }
 
-/** 第 i 格與它下面那格是否接合。 */
+/** 第 i 格與它下面那格是否接合（兩邊都要已經歸位）。 */
 export function bondedDown(cells, size, i) {
   if (Math.floor(i / size) === size - 1) return false;
-  return cells[i + size] === cells[i] + size;
+  return cells[i] === i && cells[i + size] === i + size;
 }
 
 /** 第 pos 格四邊各自有沒有接合。 */
@@ -116,6 +127,9 @@ export function bondProgress(board) {
  * 接合數就會由 0 升上去，被誤當成「啱啱黐到新嘢」—— 結果玩家一路拖
  * 一嚿砌好咗嘅嘢周圍行，就會一路彈 Excellent。
  * 按塊數就冇呢個問題：整嚿平移，每一塊嘅接合數都完全冇變。
+ *
+ * （註：接合改成「砌啱位先黐」之後已經冇整嚿平移，但呢個按塊數嘅寫法
+ * 一樣啱，而且唔會因為將來再改動作模式而出返個 bug，所以保留。）
  */
 export function bondCountsByPiece(board) {
   const counts = new Array(board.cells.length).fill(0);
@@ -166,87 +180,61 @@ export function indexToRowCol(index, size) {
 }
 
 /**
- * 整嚿平移。拖動任何一格，會把它所屬的整個 cluster 一起搬走。
+ * 拖一塊去另一格。
  *
- * - 位移量由 from → to 決定，整嚿剛性平移，形狀不變。
- * - 任何一格會被推出邊界就整個動作取消（回傳原本的 board）。
- * - 目的地原本的格被擠出來，填回這嚿騰空的位置。
- * - 因為接合是相對關係，平移之後 cluster 內部的接合完全保留。
+ * 規矩好簡單：**已經歸位（黐咗）嘅格唔郁得，亦都唔會被人頂走。** 兩邊
+ * 都係未歸位嘅散片先至交換得。
+ *
+ * 因為咁：
+ *  - 黐咗嘅嘢永遠拆唔散 —— 佢哋根本冇任何一步郁得到。
+ *  - 永遠唔會卡死 —— 只要未砌完就一定有兩格未歸位，而兩格散片之間永遠
+ *    交換得。唔使好似相對接合嗰陣咁做死局檢查。
  */
 export function moveGroup(board, from, to) {
-  if (from === to) return board;
-  const group = connectedCluster(board, from);
+  return canMoveGroup(board, from, to) ? swapCells(board, from, to) : board;
+}
 
-  const { size } = board;
-  const dRow = Math.floor(to / size) - Math.floor(from / size);
-  const dCol = (to % size) - (from % size);
-
-  const destOf = new Map();
-  for (const cell of group) {
-    const row = Math.floor(cell / size) + dRow;
-    const col = (cell % size) + dCol;
-    if (row < 0 || row >= size || col < 0 || col >= size) return board; // 出界，整嚿不動
-    destOf.set(cell, row * size + col);
-  }
-
-  const destSet = new Set(destOf.values());
-  const cells = [...board.cells];
-  const displaced = [...destSet].filter((d) => !group.has(d)).sort((a, b) => a - b).map((d) => board.cells[d]);
-  const vacated = [...group].filter((g) => !destSet.has(g)).sort((a, b) => a - b);
-
-  for (const [src, dst] of destOf) cells[dst] = board.cells[src];
-  vacated.forEach((cell, i) => {
-    cells[cell] = displaced[i];
-  });
-
-  return { ...board, cells, placed: computePlaced(cells) };
+/** 呢步落唔落得？（畀 UI 用嚟決定亮唔亮落點） */
+export function canMoveGroup(board, from, to) {
+  if (from === to) return false;
+  if (from == null || to == null) return false;
+  return !board.placed.has(from) && !board.placed.has(to);
 }
 
 /**
- * 提示 = 直接幫玩家黐埋，唔係淨係著燈。
+ * 揀一步提示：攞一塊散片，直接放返佢自己屋企。
  *
- * ⚠️ 呢個係整個提示功能嘅重點，改之前睇清楚。
+ * ── 點解一定搵到 ────────────────────────────────────────────────
+ * 塊 v 而家企喺格 p（p ≠ v）。咁格 v 入面一定唔係塊 v（塊 v 喺 p 度），
+ * 即係格 v 一定未歸位 —— 所以「將 v 搬返格 v」呢步永遠合法。未砌完就一
+ * 定有提示畀你，唔會出現撳咗個掣乜都唔發生。
  *
- * 做法：每一次都揀一塊擺返佢自己嗰格，而且揀「擺落去即刻黐到最多邊」
- * 嗰一塊。所以正確嗰一嚿會由一個起點一路向外生 —— 每撳一次都見到有
- * 嘢黐埋，唔係淨係郁咗一格。
- *
- * 點解唔揀「淨賺最多接合」嗰步（喺任何位置砌起一嚿都計）：嗰種揀法
- * 唔保證會收斂。喺棋盤中間砌起一嚿擺錯位嘅雲團一樣可以賺好多接合，
- * 跟住又要拆返佢，一路撳會兜圈。而家用「已歸位格數」做推進指標，佢
- * 每一步都嚴格加至少一格，所以最多 N² 步一定砌完。
- *
- * 唯一一次唔會黐到嘢係開局第一撳（成盤都未有一格啱，冇嘢可以黐）。
- * 之後每一撳都必定至少黐到一條邊 —— 只要仲有未砌好嘅格，正確嗰嚿嘅
- * 邊界就一定有隔籬位可以填。
- *
- * 回傳 { from, to }：from = 嗰塊而家喺邊，to = 佢應該去邊（= 佢嘅 id）。
+ * ── 點揀邊塊 ───────────────────────────────────────────────────
+ * 揀「放落去即刻同隔籬黐埋」嗰啲。玩家撳提示係想見到兩塊真係癡埋一齊，
+ * 唔係一塊靜靜哋跳咗去一個睇落一樣嘅位（Alice 早就定咗呢條）。
  */
 export function findHint(board) {
   const { cells, size } = board;
 
-  const posOf = new Array(cells.length);
-  cells.forEach((pieceId, pos) => {
-    posOf[pieceId] = pos;
-  });
-
   let best = -1;
   let pool = [];
 
-  for (let pos = 0; pos < cells.length; pos++) {
-    if (cells[pos] === pos) continue; // 已經喺正確位置
-    const from = posOf[pos];
-    const next = [...cells];
-    [next[pos], next[from]] = [next[from], next[pos]];
+  for (let home = 0; home < cells.length; home++) {
+    if (cells[home] === home) continue; // 已經歸位
+    const from = cells.indexOf(home);   // 塊 home 而家企喺邊
+    if (from < 0) continue;
 
-    const b = bondsAt({ cells: next, size }, pos);
+    const next = [...cells];
+    [next[home], next[from]] = [next[from], next[home]];
+
+    const b = bondsAt({ cells: next, size }, home);
     const gained = (b.up ? 1 : 0) + (b.down ? 1 : 0) + (b.left ? 1 : 0) + (b.right ? 1 : 0);
 
     if (gained > best) {
       best = gained;
-      pool = [{ from, to: pos }];
+      pool = [{ from, to: home }];
     } else if (gained === best) {
-      pool.push({ from, to: pos });
+      pool.push({ from, to: home });
     }
   }
 

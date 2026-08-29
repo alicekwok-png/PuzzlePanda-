@@ -14,7 +14,7 @@ export default function SettingsScreen({ onBack }) {
 
       <div className="top-bar">
         <button className="icon-btn" onClick={onBack} aria-label={t('nav.backHome')}>
-          <img src="/icons/back.png" alt="" />
+          <img src="/icons/back.webp" alt="" />
         </button>
         <div className="level-title">{t('settings.title')}</div>
         <div className="top-bar-spacer" />

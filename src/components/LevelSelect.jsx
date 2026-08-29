@@ -27,7 +27,7 @@ function ChapterGrid({ progress, onSelectChapter, onBack }) {
 
       <div className="top-bar">
         <button className="icon-btn" onClick={onBack} aria-label={t('nav.backHome')}>
-          <img src="/icons/back.png" alt="" />
+          <img src="/icons/back.webp" alt="" />
         </button>
         <div className="level-title">
           <span className="level-kicker">{t('levelSelect.collectionProgress')}</span>
@@ -118,7 +118,7 @@ function LevelPath({ chapter, progress, onSelectChapter, onSelectLevel, onBack }
 
       <div className="top-bar">
         <button className="icon-btn" onClick={onBack} aria-label={t('nav.backToThemes')}>
-          <img src="/icons/back.png" alt="" />
+          <img src="/icons/back.webp" alt="" />
         </button>
         <div className="level-title">{t('levelSelect.chooseLevel')}</div>
         <div className="top-bar-spacer" />

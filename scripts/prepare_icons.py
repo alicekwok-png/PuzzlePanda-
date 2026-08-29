@@ -9,6 +9,12 @@
     # 首頁貼紙簿入口
     python scripts/prepare_icons.py album "sticker-album-icon.png"
 
+    # 遊戲頂欄「長按預覽原圖」嘅放大鏡
+    python scripts/prepare_icons.py peek "magnifier.png"
+
+    # 返回／離開
+    python scripts/prepare_icons.py back "back-arrow.png"
+
 ── 點解要「淨主體」裁 ──────────────────────────────────────────────
 交嚟嘅插畫四周通常有散開嘅裝飾（星星、速度線）。呢啲嘢喺 1254px 好睇，
 但圖示最終得二十幾 px —— 裝飾唔單止睇唔到，仲會令主體被迫縮細一大截，
@@ -33,7 +39,7 @@ ROOT = os.path.join(os.path.dirname(__file__), '..')
 DST = os.path.join(ROOT, 'public', 'icons')
 
 # 里程碑喺畫面上得 28px，3 倍 DPR 即 84 —— 128 已經有餘裕。
-SIZES = {'milestone': 128, 'album': 192}
+SIZES = {'milestone': 128, 'album': 192, 'peek': 128, 'back': 128}
 QUALITY = 92
 MILESTONES = (25, 50, 75)
 
@@ -87,6 +93,10 @@ def main():
         build(args[2], f'milestone-{pct}.webp', SIZES['milestone'])
     elif len(args) == 2 and args[0] == 'album':
         build(args[1], 'album.webp', SIZES['album'])
+    elif len(args) == 2 and args[0] == 'peek':
+        build(args[1], 'peek.webp', SIZES['peek'])
+    elif len(args) == 2 and args[0] == 'back':
+        build(args[1], 'back.webp', SIZES['back'])
     else:
         print(__doc__)
         return 1

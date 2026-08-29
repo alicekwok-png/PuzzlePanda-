@@ -197,7 +197,7 @@ export default function AlbumScreen({
     <div className={`screen album-screen${isOverlay ? ' is-overlay' : ''}`}>
       <div className="top-bar">
         <button className="icon-btn" onClick={onBack} aria-label={t(backLabelKey)}>
-          <img src="/icons/back.png" alt="" />
+          <img src="/icons/back.webp" alt="" />
         </button>
         <div className="level-title">
           <span className="level-kicker">{t('album.title')}</span>
