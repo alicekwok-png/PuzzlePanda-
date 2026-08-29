@@ -14,6 +14,7 @@ import {
 import { loadProgress, markLevelComplete } from '../game/storage';
 import { useT } from '../i18n/context';
 import { showInterstitialOnLevelWin, showRewarded } from '../services/ads';
+import { isDevBuild } from '../services/devMode';
 import { feedback, preloadSfx } from '../services/feedback';
 import { CHAPTERS, LEVELS } from '../game/levels';
 import AdSlot from './AdSlot';
@@ -42,6 +43,9 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   const [combo, setCombo] = useState(0);
   const [feedbackMsg, setFeedbackMsg] = useState(null);
   const [justBonded, setJustBonded] = useState(() => new Set());
+  /* 砌完嗰一下嘅特效：棋盤變白框 + 星點，停一停先彈結算畫面。
+     唔即刻彈 —— 玩家要見到自己砌好嗰幅完整嘅相。 */
+  const [solvedFlash, setSolvedFlash] = useState(false);
   const [peeking, setPeeking] = useState(false);
   const [peeksLeft, setPeeksLeft] = useState(level.peeks);
   const [bestMoves, setBestMoves] = useState(null);
@@ -80,6 +84,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setCombo(0);
     setFeedbackMsg(null);
     setJustBonded(new Set());
+    setSolvedFlash(false);
     setChapterDone(null);
   }
 
@@ -202,6 +207,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
 
     if (isSolved(newBoard)) {
       feedback.levelClear();
+      setSolvedFlash(true);
 
       /* 先讀舊進度再寫，才分得出「首次完成」與「重玩」。
          重玩已完成的第 5 關不應該再觸發章節過渡 —— 這個判斷本身就處理了
@@ -218,7 +224,9 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
       if (justCompletedChapter) {
         setChapterDone(CHAPTERS.find((c) => c.id === level.chapterId) ?? null);
       }
-      setTimeout(() => setWon(true), 420);
+      /* 1.15s = boardComplete 動畫嘅長度（見 index.css）。
+         兩邊要夾住，太早彈就會斬斷特效，太遲玩家會等。 */
+      setTimeout(() => setWon(true), 1150);
     }
   }
 
@@ -268,6 +276,15 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     if (!peeking) return;
     setPeeking(false);
     feedback.peekClose();
+  }
+
+  /* 開發者用：一鍵砌好，用嚟睇過關特效同結算畫面，唔使真係玩完一關。
+     同首頁嗰條開發者列一樣，只在 dev build / ?dev=1 出現。
+     行嘅係同一條 commitBoard，所以特效、音效、存檔、章節過渡全部照跑。 */
+  function devSolve() {
+    if (won) return;
+    const cells = Array.from({ length: level.size * level.size }, (_, i) => i);
+    commitBoard({ size: level.size, cells, placed: computePlaced(cells) });
   }
 
   /** 提示用完時，讓玩家看一支獎勵式廣告換一次提示。 */
@@ -375,7 +392,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
               {feedbackMsg.comboCount > 1 && <span className="feedback-combo">×{feedbackMsg.comboCount}</span>}
             </div>
           )}
-          <div className="board-mat">
+          <div className={`board-mat${solvedFlash ? ' is-complete' : ''}`}>
             <div
               className="board"
               ref={boardRef}
@@ -392,7 +409,9 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
                   size={board.size}
                   background={level.theme.background}
                   placed={board.placed.has(position)}
-                  bonds={bondsAt(board, position)}
+                  /* 砌完之後唔再畫任何格線 —— 成幅相要乾乾淨淨咁
+                     喺白框入面，同結算畫面嗰張相卡接得返上。 */
+                  bonds={solvedFlash ? null : bondsAt(board, position)}
                   justBonded={justBonded.has(position)}
                   /* 散片 = 拎起嚟嘅姿態（放大 + 傾側）；
                      砌起咗嘅一嚿 = 輕微抬起，讀起來像一整塊而唔係一堆碎片。 */
@@ -408,6 +427,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
                 />
               ))}
             </div>
+            {solvedFlash && <span className="board-sparkles" aria-hidden="true" />}
           </div>
         </div>
 
@@ -427,6 +447,12 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
 
       {/* 廣告版位：遊戲畫面底部橫幅 */}
       <AdSlot id="game-bottom-banner" format="banner" label={t('ads.bannerSlot')} />
+
+      {isDevBuild() && !won && (
+        <button type="button" className="dev-btn dev-solve" onClick={devSolve}>
+          DEV 即刻過關
+        </button>
+      )}
 
       {peeking && (
         <div className="peek-overlay">

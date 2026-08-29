@@ -345,6 +345,16 @@ button:focus-visible,
   background: rgba(47, 182, 168, 0.15);
 }
 
+/* 開發者「即刻過關」：浮喺棋盤左下角，虛線 + 等寬字，
+   一睇就知係內部工具，唔會當佢係產品 UI。 */
+.dev-solve {
+  position: absolute;
+  left: calc(var(--safe-left) + 8px);
+  bottom: calc(var(--safe-bottom) + var(--ad-banner-h) + 8px);
+  z-index: 20;
+  opacity: 0.75;
+}
+
 /* ---------- 主要 / 次要按鈕 ----------
    立體感靠實心投影：按下去時往下沉、投影收短，像真的按鈕。 */
 .primary-btn {
@@ -635,6 +645,8 @@ button:focus-visible,
 
 /* 立體棋盤面板：硬投影 + 一層柔和落地陰影 */
 .board-mat {
+  /* .board-sparkles 用 inset 定位，要有呢個先貼得正 */
+  position: relative;
   width: 100%;
   max-width: min(100%, calc((100svh - var(--chrome-h)) * 0.625));
   padding: 5px;
@@ -1479,26 +1491,26 @@ button:focus-visible,
 }
 
 /* ---------- 過關結算 ----------
-   設計：完成的相片像一疊相卡（後面兩張歪住），下面貼紙盒 + 三張數據卡。 */
+   張相係主角：闊度由「扣走其他所有元素之後仲剩幾多高」反推。
+   其餘元素全部壓到最細，貼紙用飛入動畫，唔佔常駐空間。 */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(6, 8, 18, 0.82);
+  background: rgba(6, 8, 18, 0.86);
   backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  padding-bottom: calc(20px + var(--safe-bottom));
+  padding: 14px;
+  padding-bottom: calc(14px + var(--safe-bottom));
   z-index: 50;
   animation: fadeIn 0.22s ease;
   overflow-y: auto;
 }
 
 .modal-card {
-  padding: 6px 0 0;
   text-align: center;
-  max-width: 340px;
+  max-width: 380px;
   width: 100%;
   animation: modalIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -1509,12 +1521,17 @@ button:focus-visible,
 }
 
 /* 一疊相卡：後兩張用 ::before / ::after 歪住墊底。
-   闊度由高度反推（5:8），相片先至唔會被 max-height 壓到變成 cover 裁切。
-   ::before / ::after 用 inset:0，所以尺寸一定要落喺呢個 wrapper 度。 */
+   ⚠️ 闊度一定要由高度反推（5:8），唔可以淨係寫 max-height —— aspect-ratio
+   遇到 max-height 只會壓扁高度，闊度唔跟住縮，張相會變成 cover 裁切。
+   296px = 瀏覽器實測：關卡名 33 + 數據卡 63 + 貼紙格 48 + 三粒掣 107
+   + 相框下邊距 12 + overlay 上下內距 28 = 291，取 296 留返幾格位。
+   ⚠️ 改咗上面任何一嚿嘅高度就要一齊改呢個數，並且要喺 393×852（打包成
+   App）同 393×659（Safari 有網址列）兩個尺寸度量返 .modal-card 嘅高度
+   有冇爆出畫面。 */
 .modal-photo-stack {
   position: relative;
-  width: min(100%, calc(34svh * 0.625));
-  margin: 0 auto 22px;
+  width: min(100%, calc((100svh - 296px) * 0.625));
+  margin: 0 auto 12px;
 }
 
 .modal-photo-stack::before,
@@ -1522,92 +1539,66 @@ button:focus-visible,
   content: '';
   position: absolute;
   inset: 0;
-  background: var(--surface);
+  background: #f6f1e6;
   border-radius: var(--r-xl);
-  box-shadow: 0 6px 16px rgba(4, 6, 16, 0.45);
+  box-shadow: 0 6px 16px rgba(4, 6, 16, 0.5);
 }
 
-.modal-photo-stack::before { transform: rotate(-5deg); }
-.modal-photo-stack::after { transform: rotate(4deg); }
+/* 角度細過 3 度 —— 大過嘅話張相咁高，歪出嚟嗰隻角會超出 overlay 頂部
+   俾裁走，睇落唔似一疊卡，似張相切咗一橛。 */
+.modal-photo-stack::before { transform: rotate(-2.5deg); }
+.modal-photo-stack::after { transform: rotate(2deg); }
 
+/* 白色相框 + 暖光暈，跟參考稿。唔用深藍框 —— 深底上面再用深色框，
+   個「相卡」感覺會完全出唔到。 */
 .modal-photo {
   position: relative;
   z-index: 1;
   width: 100%;
   aspect-ratio: var(--board-ratio);
-  background: var(--surface);
+  background: #fdfbf6;
   border-radius: var(--r-xl);
-  padding: 8px;
-  box-shadow: 0 12px 26px rgba(4, 6, 16, 0.55);
+  padding: 7px;
+  box-shadow: 0 12px 26px rgba(4, 6, 16, 0.6), 0 0 42px rgba(255, 201, 77, 0.22);
 }
 
 .modal-photo > span {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: var(--r-md);
+  border-radius: 15px;
   background-size: cover;
   background-position: center;
 }
 
-.modal-kicker {
-  font-family: var(--font-display);
-  font-size: 10px;
-  /* 中文字距唔可以照跟英文嗰 0.24em —— 會散到讀唔到 */
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin: 0 0 4px;
-  font-weight: 800;
-}
-
-.modal-card h2 {
-  margin: 0 0 4px;
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 800;
-  color: #fff;
-}
-
+/* 關卡名縮成一行細字 —— 冇獨立大標題，大張相本身就係「完成咗」嘅訊息 */
 .modal-level-name {
-  font-family: var(--font-display);
-  font-weight: 700;
-  color: var(--dim);
-  margin: 0 0 12px;
-  font-size: 13px;
-}
-
-/* 貼紙盒：虛線 teal 框 + 文字 */
-.sticker-earned {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin: 0 0 14px;
-}
-
-.sticker-earned-img {
-  width: 76px;
-  height: 76px;
-  border-radius: var(--r-lg);
-  object-fit: cover;
-  background: var(--surface);
-  border: 3px dashed var(--teal);
-  box-shadow: 0 4px 0 rgba(4, 6, 16, 0.35);
-}
-
-.sticker-earned-label {
+  gap: 7px;
   font-family: var(--font-display);
-  font-size: 14px;
   font-weight: 700;
-  color: var(--teal);
+  color: var(--dim);
+  margin: 0 0 14px;
+  font-size: 13px;
 }
 
-/* 三張數據卡，每張頂上有一個彩色標籤 */
+.modal-best-tag {
+  background: var(--gold);
+  color: var(--surface);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* 三張數據卡，每張頂上一個彩色標籤 */
 .modal-stats {
   display: flex;
   gap: 8px;
-  margin: 18px 0 16px;
+  margin: 0 0 14px;
 }
 
 .modal-stat {
@@ -1615,13 +1606,13 @@ button:focus-visible,
   position: relative;
   background: var(--surface);
   border-radius: 14px;
-  padding: 16px 4px 10px;
+  padding: 15px 4px 9px;
   box-shadow: 0 4px 0 var(--drop);
 }
 
 .modal-stat .k {
   position: absolute;
-  top: -10px;
+  top: -9px;
   left: 50%;
   transform: translateX(-50%);
   background: var(--teal);
@@ -1647,6 +1638,253 @@ button:focus-visible,
   font-variant-numeric: tabular-nums;
 }
 
+/* 星點場：一組 radial-gradient 砌出嚟，唔使開幾十個 DOM 節點。
+   全部落喺邊緣一圈，中間留空俾相片／棋盤蓋住。 */
+.modal-sparkles {
+  position: absolute;
+  inset: -26px;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(3.2px 3.2px at 71.1% 95.0%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(2.6px 2.6px at 11.3% 47.1%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(2.0px 2.0px at 98.4% 11.5%, #ffecbd, transparent 64%),
+    radial-gradient(2.6px 2.6px at 95.8% 68.4%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(3.2px 3.2px at 3.6% 22.6%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(3.8px 3.8px at 90.6% 8.7%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(3.2px 3.2px at 88.7% 0.7%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(2.0px 2.0px at 32.6% 98.2%, #fff, transparent 64%),
+    radial-gradient(2.0px 2.0px at 21.3% 90.0%, #ffecbd, transparent 64%),
+    radial-gradient(2.0px 2.0px at 32.0% 91.0%, #ffecbd, transparent 64%),
+    radial-gradient(3.2px 3.2px at 50.5% 3.7%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(2.0px 2.0px at 2.8% 80.9%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(2.0px 2.0px at 94.6% 49.3%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(3.8px 3.8px at 90.7% 25.7%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(3.8px 3.8px at 11.4% 0.5%, #fff, transparent 64%),
+    radial-gradient(3.8px 3.8px at 53.8% 4.4%, #fff, transparent 64%),
+    radial-gradient(3.8px 3.8px at 6.6% 53.9%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(3.8px 3.8px at 81.6% 90.1%, #ffecbd, transparent 64%),
+    radial-gradient(2.0px 2.0px at 10.9% 42.0%, #ffecbd, transparent 64%),
+    radial-gradient(2.6px 2.6px at 2.3% 19.4%, #fff, transparent 64%),
+    radial-gradient(2.0px 2.0px at 10.5% 73.1%, #ffecbd, transparent 64%),
+    radial-gradient(3.8px 3.8px at 87.9% 2.3%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(3.2px 3.2px at 91.5% 62.8%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(2.6px 2.6px at 92.3% 21.8%, #fff, transparent 64%),
+    radial-gradient(3.8px 3.8px at 9.7% 83.2%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(3.2px 3.2px at 79.9% 9.6%, #ffecbd, transparent 64%);
+  animation: pgPulse 3s ease-in-out infinite;
+}
+
+/* 砌完嗰一下：棋盤由深藍面板變成白色相框 + 暖光暈，同過關畫面嗰張相卡
+   同一個語言，所以由棋盤過渡去結算畫面唔會突兀。 */
+.board-mat.is-complete {
+  animation: boardComplete 1.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes boardComplete {
+  0% {
+    background: #1a1d3d;
+    transform: scale(1);
+    box-shadow: 0 6px 0 rgba(4, 6, 16, 0.4), 0 12px 22px rgba(4, 6, 16, 0.5);
+  }
+  40% {
+    background: #fdfbf6;
+    transform: scale(1.035);
+    box-shadow: 0 0 0 rgba(4, 6, 16, 0), 0 0 52px rgba(255, 201, 77, 0.6);
+  }
+  100% {
+    background: #fdfbf6;
+    transform: scale(1);
+    box-shadow: 0 10px 24px rgba(4, 6, 16, 0.55), 0 0 38px rgba(255, 201, 77, 0.32);
+  }
+}
+
+.board-sparkles {
+  position: absolute;
+  inset: -34px;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(2.6px 2.6px at 92.4% 46.6%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(2.6px 2.6px at 6.3% 3.6%, #fff, transparent 64%),
+    radial-gradient(3.2px 3.2px at 0.5% 8.5%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(2.0px 2.0px at 99.8% 99.6%, #ffecbd, transparent 64%),
+    radial-gradient(2.0px 2.0px at 28.9% 7.0%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(2.0px 2.0px at 6.7% 1.7%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(3.8px 3.8px at 21.0% 91.0%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(2.0px 2.0px at 98.0% 39.7%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(3.8px 3.8px at 8.7% 33.3%, #fff, transparent 64%),
+    radial-gradient(3.8px 3.8px at 1.1% 46.5%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(2.6px 2.6px at 50.9% 98.5%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(3.2px 3.2px at 27.0% 97.1%, #fff, transparent 64%),
+    radial-gradient(2.6px 2.6px at 10.0% 98.9%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(2.6px 2.6px at 7.3% 9.0%, #fff, transparent 64%),
+    radial-gradient(3.8px 3.8px at 45.3% 95.9%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(2.6px 2.6px at 15.4% 90.8%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(2.0px 2.0px at 7.8% 4.7%, #fff, transparent 64%),
+    radial-gradient(3.8px 3.8px at 42.1% 90.5%, #ffecbd, transparent 64%),
+    radial-gradient(2.0px 2.0px at 52.0% 92.9%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(2.6px 2.6px at 28.0% 91.7%, #fff, transparent 64%),
+    radial-gradient(2.6px 2.6px at 6.9% 41.1%, #fff, transparent 64%),
+    radial-gradient(2.6px 2.6px at 4.7% 28.2%, #fff, transparent 64%),
+    radial-gradient(2.6px 2.6px at 98.0% 65.7%, #fff, transparent 64%),
+    radial-gradient(3.2px 3.2px at 92.4% 47.5%, #ffecbd, transparent 64%),
+    radial-gradient(2.0px 2.0px at 96.3% 2.1%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(2.6px 2.6px at 6.7% 31.1%, #fff, transparent 64%),
+    radial-gradient(2.0px 2.0px at 7.5% 54.6%, rgba(255,255,255,.85), transparent 64%),
+    radial-gradient(3.2px 3.2px at 79.3% 91.5%, #fff, transparent 64%),
+    radial-gradient(3.8px 3.8px at 68.5% 90.1%, #fff, transparent 64%),
+    radial-gradient(3.2px 3.2px at 8.0% 63.9%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(2.0px 2.0px at 8.4% 75.0%, #ffecbd, transparent 64%),
+    radial-gradient(2.0px 2.0px at 92.0% 25.6%, #ffecbd, transparent 64%),
+    radial-gradient(3.8px 3.8px at 90.6% 66.0%, rgba(255,236,189,.85), transparent 64%),
+    radial-gradient(3.8px 3.8px at 91.4% 88.0%, rgba(255,255,255,.85), transparent 64%);
+  /* 星點會有一部分疊喺相上面。加一圈暗影，令佢喺光同暗嘅相上面
+     都讀得到 —— 唔加嘅話白點落喺秋葉／雲呢類淺色相就完全睇唔見。 */
+  filter: drop-shadow(0 0 2.5px rgba(0, 0, 0, 0.6));
+  animation: boardSparkle 1.15s ease-out forwards;
+}
+
+/* 由相框向外擴散嘅光環，同星點一齊爆出嚟 */
+.board-sparkles::after {
+  content: '';
+  position: absolute;
+  inset: 30px;
+  border-radius: 18px;
+  box-shadow: 0 0 0 2px rgba(255, 236, 189, 0.9), 0 0 30px 6px rgba(255, 201, 77, 0.55);
+  animation: boardRing 1.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes boardRing {
+  0%   { opacity: 0; transform: scale(0.96); }
+  30%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.06); }
+}
+
+@keyframes boardSparkle {
+  0%   { opacity: 0; transform: scale(0.92); }
+  30%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.9; transform: scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-mat.is-complete,
+  .board-sparkles { animation: none; }
+}
+
+/* ---------- 貼紙：彈出 → 飛入貼紙簿 ---------- */
+
+/* 落腳點。⚠️ 未飛到之前用 opacity:0 而唔係 display:none ——
+   要留返個位俾 JS 量度飛去邊。 */
+.sticker-filed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 0 0 14px;
+  opacity: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--teal);
+}
+
+.sticker-filed.is-in {
+  animation: stickerLand 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes stickerLand {
+  0%   { opacity: 0; transform: scale(0.86); }
+  60%  { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: none; }
+}
+
+.sticker-filed-img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border-radius: 9px;
+  border: 2px dashed var(--teal);
+  padding: 2px;
+}
+
+/* 飛緊嗰陣。⚠️ 190px 要同 WinModal.jsx 嘅 FLY_SIZE 一致 ——
+   落地嘅縮放比例係由呢個數同目標格嘅實際闊度計出嚟。 */
+.sticker-flight {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 190px;
+  height: 190px;
+  margin: -95px 0 0 -95px;
+  z-index: 70;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: stickerFly 1.5s cubic-bezier(0.34, 0.9, 0.3, 1) forwards;
+}
+
+@keyframes stickerFly {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.32) rotate(-16deg); }
+  11%  { opacity: 1; transform: translate(0, 0) scale(1.16) rotate(5deg); }
+  20%  { transform: translate(0, 0) scale(1) rotate(0deg); }
+  60%  { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--fly-x), var(--fly-y)) scale(var(--fly-s)); }
+}
+
+.sticker-flight-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px rgba(4, 6, 16, 0.6));
+}
+
+.sticker-flight-glow {
+  position: absolute;
+  inset: -34%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 201, 77, 0.5), rgba(255, 201, 77, 0) 68%);
+  animation: pgPulse 1.1s ease-in-out infinite;
+}
+
+/* 彈出嗰一下嘅星芒：一粒 dot 用多重 box-shadow 散成一圈，再向外炸開 */
+.sticker-flight-burst {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow:
+    72px -46px 0 -1px var(--pink),
+    -78px -30px 0 -1px var(--teal),
+    58px 62px 0 -2px var(--text),
+    -66px 58px 0 -1px var(--orange),
+    0 -92px 0 -2px var(--gold),
+    0 88px 0 -2px var(--pink);
+  animation: stickerBurst 0.85s ease-out 0.1s forwards;
+}
+
+@keyframes stickerBurst {
+  0%   { opacity: 0; transform: scale(0.2); }
+  35%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+
+.sticker-flight-label {
+  position: absolute;
+  bottom: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--gold);
+  text-shadow: 0 2px 8px rgba(4, 6, 16, 0.8);
+  animation: fadeIn 0.3s ease 0.12s both;
+}
+
 .modal-actions {
   display: flex;
   flex-direction: column;
@@ -1659,6 +1897,12 @@ button:focus-visible,
 }
 
 .modal-actions .secondary-row .secondary-btn { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-sparkles,
+  .sticker-filed.is-in { animation: none; }
+  .sticker-filed { opacity: 1; }
+}
 
 /* ==========================================================================
    廣告位
