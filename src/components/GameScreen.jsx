@@ -11,7 +11,8 @@ import {
   moveGroup,
   swapCells,
 } from '../game/engine';
-import { loadProgress, markLevelComplete } from '../game/storage';
+import { claimDailyMission, consumeBonusHints, loadProgress, markLevelComplete } from '../game/storage';
+import { ensureTodayMission, isMissionSatisfied, isUnlocked } from '../game/dailyMission';
 import { useT } from '../i18n/context';
 import { hideBanner, showBanner, showInterstitialOnLevelWin, showRewarded } from '../services/ads';
 import { isDevBuild } from '../services/devMode';
@@ -33,9 +34,12 @@ const DRAG_DEADZONE_PX = 12;
 /* 進度條上面嘅里程碑。每個百分比對應 public/icons/milestone-<pct>.webp。
    未行到就灰灰哋，行到就著返色同彈一下。
 
-   三張圖分別係：25 綁頭帶擰拳（起步加油）、50 向前撲一拳舉高（衝刺中）、
-   75 雙手舉高眼瞇埋（歡呼）。原圖喺 design/icons/，用
-   scripts/prepare_icons.py 處理成 public/icons/milestone-<pct>.webp。
+   敘事排序（見 design/ui-design-system-spec.md §5b）：
+     25 綁頭帶擰拳     progress-panda-1  專注／準備開始
+     50 雙手舉高歡呼   progress-panda-2  開心／中段鼓勵
+     75 跳躍踢腳       progress-panda-3  興奮／就嚟到喇
+   原圖喺 design/icons/，用 scripts/prepare_icons.py 處理成
+   public/icons/milestone-<pct>.webp。
    要加減里程碑就改呢個陣列，同埋跑多次個 script 落多幾張圖。 */
 const MILESTONES = [25, 50, 75];
 
@@ -43,7 +47,14 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   const [board, setBoard] = useState(() => generateBoard(level.size));
   const [history, setHistory] = useState([]);
   const [moves, setMoves] = useState(0);
-  const [hintsLeft, setHintsLeft] = useState(level.hints);
+  /* 做完每日任務攞到嘅額外提示，開關嗰陣一次過加落嚟然後清零（用完即銷）。
+     ⚠️ 用 useState 嘅 initialiser 而唔係 useEffect —— useEffect 喺 React
+     StrictMode 開發模式會行兩次，bonus 就會俾人食咗兩次。 */
+  const [bonusHints] = useState(consumeBonusHints);
+  const [hintsLeft, setHintsLeft] = useState(() => level.hints + bonusHints);
+  /* 每日任務「零提示過關」要知呢一鋪用咗幾多次 —— 唔可以由 hintsLeft 倒推，
+     因為初始值會俾 bonus 加大咗。 */
+  const [hintsUsed, setHintsUsed] = useState(0);
   const [won, setWon] = useState(false);
   const [draggingPos, setDraggingPos] = useState(null);
   /* 拖住嗰一嚿。connectedCluster 一定包含起點自己，所以散片 = size 1、
@@ -89,7 +100,9 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setBoard(generateBoard(level.size));
     setHistory([]);
     setMoves(0);
-    setHintsLeft(level.hints);
+    /* 重新開始唔會再攞多次 bonus —— 開關嗰陣已經清零咗 */
+    setHintsLeft(level.hints + bonusHints);
+    setHintsUsed(0);
     setPeeksLeft(level.peeks);
     setPeeking(false);
     setWon(false);
@@ -235,8 +248,20 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
          idempotency，不需要額外的「播過未」storage flag。 */
       const before = loadProgress();
       const wasCompleted = !!before.completed[level.id];
+      const previousBest = before.bestMoves[level.id] ?? null;
       const progress = markLevelComplete(level.id, moves + 1, totalLevels);
       setBestMoves(progress.bestMoves[level.id] ?? null);
+
+      /* 每日任務：喺呢度判斷，因為只有呢度先同時知道「用咗幾多提示」、
+         「用咗幾多步」同「之前嘅最佳步數」。
+         ⚠️ 要用 markLevelComplete 之前嗰個 previousBest —— 佢已經把
+         今鋪嘅成績寫咗入去，之後再讀就永遠贏唔到自己。 */
+      if (isUnlocked(progress)) {
+        const mission = ensureTodayMission(progress);
+        if (isMissionSatisfied(mission, { hintsUsed, moves: moves + 1, previousBest })) {
+          claimDailyMission();
+        }
+      }
 
       const chapterLevelIds = LEVELS.filter((l) => l.chapterId === level.chapterId).map((l) => l.id);
       const completedAfter = chapterLevelIds.filter((id) => progress.completed[id]).length;
@@ -279,6 +304,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     const found = findHint(board);
     if (!found) return;
     setHintsLeft((h) => h - 1);
+    setHintsUsed((n) => n + 1);
     feedback.hint();
     commitBoard(swapCells(board, found.from, found.to));
   }

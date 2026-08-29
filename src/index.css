@@ -296,14 +296,139 @@ button:focus-visible,
   max-width: 26ch;
 }
 
-/* .icon-btn 在下面設了 position: relative（為了掛徽章），而且寫在後面，
-   同分權重下會贏。所以這裡一定要連 .icon-btn 一齊寫，否則齒輪會掉到
-   版面正中間。 */
-.icon-btn.home-settings {
+/* 首頁右上角嗰兩粒（每日任務 + 設定） */
+.home-top-actions {
   position: absolute;
   top: calc(var(--safe-top) + 14px);
   right: calc(var(--safe-right) + 16px);
   z-index: 2;
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------- 每日任務 ---------- */
+.home-daily.is-locked { opacity: 0.55; }
+
+/* 鎖掛喺左下角，紅點喺右上角 —— 兩個唔會同時出現，但擺開位就唔使
+   為咗排版而互相遷就。 */
+.home-daily-lock {
+  position: absolute;
+  bottom: -4px;
+  left: -4px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dim);
+}
+
+.home-daily-lock .ui-icon { width: 9px; height: 9px; }
+
+.home-daily-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 2px solid var(--bg);
+  animation: pgPulse 1.6s ease-in-out infinite;
+}
+
+.daily-card {
+  width: 100%;
+  max-width: 330px;
+  padding: 22px 20px 20px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  border: 2px solid var(--outline-soft);
+  box-shadow: 0 8px 0 var(--bevel-shadow), 0 16px 30px rgba(4, 6, 16, 0.55);
+  text-align: center;
+  animation: modalIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.daily-lock-art {
+  width: 62px;
+  height: 62px;
+  margin: 12px auto 4px;
+  border-radius: 50%;
+  background: rgba(4, 6, 16, 0.32);
+  border: 2px dashed var(--line-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--faint);
+}
+
+.daily-lock-art .ui-icon { width: 28px; height: 28px; }
+
+/* 今日任務本身 —— 成張卡最重要嗰句，所以字最大 */
+.daily-task {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: rgba(4, 6, 16, 0.28);
+  border: 2px solid var(--outline-soft);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.daily-task.is-done {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.daily-check {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.daily-check .ui-icon { width: 11px; height: 11px; }
+
+.daily-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 12px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #ffd873, var(--accent-gold));
+  border: 2px solid var(--outline);
+  box-shadow: 0 3px 0 var(--gold-shadow);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--surface);
+}
+
+.daily-reward-icon { width: 15px; height: 15px; }
+
+.daily-body {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--dim);
+  text-wrap: balance;
 }
 
 /* ---------- 開發者列（只在 dev build 出現）----------

@@ -61,6 +61,13 @@ Alice攞咗市面上另一隻拼圖app（Jigsawcard Solitaire）個screenshot同
 - 喺現有「X/60」總進度bar嘅3個tick分隔位，每個位放一隻細熊貓icon（大約32-40px，唔好搶咗條bar本身嘅視覺重量）。
 - 3隻熊貓可以係3個唔同姿勢/表情，由第一個（例如專注/努力）到第三個（例如興奮/慶祝「就嚟到喇」），帶少少進度遞進嘅敘事感，唔使做動態切換邏輯，靜態3張圖各自擺喺自己個位就得。
 - 圖by Alice自己做，插畫風格、唔係emoji，同`sticker-album-icon.png`嗰種手繪質感一致。建議存做`design/icons/progress-panda-1.png`、`-2.png`、`-3.png`，透明底。
+
+**⚠️ 2026-08-29更新——3張已經生成，存咗喺`design/icons/`**（1254×1254透明底PNG，同`sticker-album-icon.png`一致嘅插畫風格）。已經喺32/36/40px（貼近實際32-40px擺放尺寸）落背景色測試過，3隻嘅輪廓、頭巾／星星等特徵喺細size都仲分得出，通過可讀性測試。
+
+**進度遞進排序（我按姿態表情揀嘅，如果同你原意唔啱可以隨時改返）：**
+- `progress-panda-1.png`＝橙頭巾、握拳thumbs-up、坐姿——對應第一個tick（專注/準備開始）。
+- `progress-panda-2.png`＝雙手舉起歡呼、開口笑、坐姿——對應第二個tick（開心/中段鼓勵）。
+- `progress-panda-3.png`＝跳躍踢腳動態姿勢——對應第三個tick（興奮/就嚟到喇）。
 - 淨係加喺總進度bar（跨關卡、頂部嗰條），**唔係**GameScreen入面單一關卡嘅board completion % bar（`.progress-bar-fill`）——兩條bar意義唔同，唔好搞混咗擺埋一齊。
 
 ### 5. 進度Pill

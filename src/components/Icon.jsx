@@ -105,6 +105,27 @@ const ICONS = {
       </>
     ),
   },
+  // 月曆：每日任務入口
+  calendar: {
+    attrs: STROKE,
+    body: (
+      <>
+        <rect x="3.2" y="5" width="17.6" height="16" rx="3" />
+        <path d="M3.2 10h17.6M8 3v4M16 3v4" />
+        <path d="M8 14.5h2.4M13.6 14.5H16M8 17.8h2.4M13.6 17.8H16" />
+      </>
+    ),
+  },
+  // 燈膽：提示（每日任務獎勵）
+  bulb: {
+    attrs: STROKE,
+    body: (
+      <>
+        <path d="M15 14c.2-1 .7-1.7 1.5-2.5a5.5 5.5 0 1 0-9 0c.8.8 1.3 1.5 1.5 2.5" />
+        <path d="M9.2 17.6h5.6M10.2 20.8h3.6" />
+      </>
+    ),
+  },
   chevronLeft: { attrs: { ...STROKE, strokeWidth: 2.4 }, body: <path d="M15 5l-7 7 7 7" /> },
   chevronRight: { attrs: { ...STROKE, strokeWidth: 2.4 }, body: <path d="M9 5l7 7-7 7" /> },
   // 環圈裝訂 + 揭起右上角嘅簿：貼紙簿

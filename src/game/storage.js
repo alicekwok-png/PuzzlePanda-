@@ -23,7 +23,19 @@ export function saveLanguage(code) {
 function defaultProgress() {
   // earnedAt 是後加的欄位（收藏卡要顯示取得日期）。loadProgress 會把舊存檔
   // 跟這個預設值合併，所以舊玩家不會壞，只是早期關卡沒有日期。
-  return { unlocked: 1, completed: {}, bestMoves: {}, earnedAt: {} };
+  // dailyMission / bonusHints 同理，都是後加的，舊存檔會自動補上預設值。
+  return {
+    unlocked: 1,
+    completed: {},
+    bestMoves: {},
+    earnedAt: {},
+    /* 每日任務。date 係本機日期（YYYY-MM-DD）—— 純本地邏輯，冇後端、
+       冇帳號，同 storage.js 其餘部分一致。 */
+    dailyMission: { date: '', taskType: '', claimed: false },
+    /* 做完每日任務攞到嘅額外提示，未用嘅會累積。開新一關嗰陣一次過加落
+       嗰關嘅 hintsLeft 然後清零（用完即銷，冇「揀邊關用」嘅 UI）。 */
+    bonusHints: 0,
+  };
 }
 
 export function loadProgress() {
@@ -43,6 +55,41 @@ export function saveProgress(progress) {
   } catch {
     // localStorage unavailable (private mode etc.) - fail silently, non-critical
   }
+}
+
+/** 本機日期 YYYY-MM-DD。刻意唔用 UTC —— 玩家嘅「今日」係佢自己個時區。 */
+export function localDateKey(d = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** 攞走全部累積嘅 bonus hint（一次過清零）。開一關嗰陣叫。 */
+export function consumeBonusHints() {
+  const progress = loadProgress();
+  const n = progress.bonusHints || 0;
+  if (n > 0) {
+    progress.bonusHints = 0;
+    saveProgress(progress);
+  }
+  return n;
+}
+
+/** 記低今日抽到嘅任務。 */
+export function saveDailyMission(mission) {
+  const progress = loadProgress();
+  progress.dailyMission = mission;
+  saveProgress(progress);
+  return progress;
+}
+
+/** 今日任務達成：記低已攞，並且加一個 bonus hint。 */
+export function claimDailyMission() {
+  const progress = loadProgress();
+  if (progress.dailyMission.claimed) return progress; // 一日一次
+  progress.dailyMission = { ...progress.dailyMission, claimed: true };
+  progress.bonusHints = (progress.bonusHints || 0) + 1;
+  saveProgress(progress);
+  return progress;
 }
 
 export function markLevelComplete(levelId, moves, totalLevels) {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AlbumScreen from './components/AlbumScreen';
+import DailyMission, { DailyMissionButton } from './components/DailyMission';
 import Icon from './components/Icon';
 import GameScreen from './components/GameScreen';
 import IntroScreen from './components/IntroScreen';
@@ -17,6 +18,7 @@ export default function App() {
   const [progress, setProgress] = useState(() => loadProgress());
   const [activeLevel, setActiveLevel] = useState(null);
   const [devUnlock, setDevUnlock] = useState(() => isUnlockAll());
+  const [showDaily, setShowDaily] = useState(false);
   const t = useT();
 
   // 開發者模式開啟時，關卡選擇看到的進度是「全部解鎖」，
@@ -82,16 +84,22 @@ export default function App() {
          見 index.css 嘅 .home-screen::after。 */
       <div className="screen home-screen">
 
-        <button
-          className="icon-btn home-settings"
-          onClick={() => {
-            feedback.tap();
-            setScreen('settings');
-          }}
-          aria-label={t('home.settingsAria')}
-        >
-          <Icon name="gear" className="icon-btn-svg" />
-        </button>
+        <div className="home-top-actions">
+          {/* 每日任務。⚠️ 用真實 progress 唔用 visibleProgress —— 開發者
+              模式「解鎖全部關卡」唔應該連每日任務都解埋，佢睇嘅係
+              completed[10]，唔係 unlocked。 */}
+          <DailyMissionButton progress={progress} onOpen={() => setShowDaily(true)} />
+          <button
+            className="icon-btn"
+            onClick={() => {
+              feedback.tap();
+              setScreen('settings');
+            }}
+            aria-label={t('home.settingsAria')}
+          >
+            <Icon name="gear" className="icon-btn-svg" />
+          </button>
+        </div>
 
         <div className="home-hero">
           <img className="home-logo" src="/icons/logo.png" alt="" />
@@ -149,6 +157,10 @@ export default function App() {
               重設進度
             </button>
           </div>
+        )}
+
+        {showDaily && (
+          <DailyMission progress={progress} onClose={() => setShowDaily(false)} />
         )}
       </div>
     );
