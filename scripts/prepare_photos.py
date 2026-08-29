@@ -167,8 +167,14 @@ def install_map(src_path, chapter_key):
     # 只會壓暗，唔會調光 —— 調光會浮出雜訊同色階
     factor = min(1.0, max(0.35, MAP_TARGET_LUM / lum)) if lum else 1.0
     im = ImageEnhance.Brightness(im).enhance(factor)
-    im = ImageEnhance.Color(im).enhance(1.15)
-    print(f'   （原圖銳度 {sharp:.1f} → 模糊 {blur}；亮度 {lum:.0f} → ×{factor:.2f}）')
+
+    # ⚠️ 壓得越暗，就要補返越多飽和度。粉色系（甜品、貓咪窗光）本身淺又
+    # 淡，硬壓暗之後會變一撻灰啡，主題色完全冇咗 —— 有per-chapter 背景
+    # 但睇落十張都差唔多，就白做。壓幾多補幾多，比例係試出嚟嘅。
+    saturation = 1.15 + (1 - factor) * 0.8
+    im = ImageEnhance.Color(im).enhance(saturation)
+    print(f'   （銳度 {sharp:.1f} → 模糊 {blur}；亮度 {lum:.0f} → ×{factor:.2f}；'
+          f'飽和 ×{saturation:.2f}）')
 
     out_dir = os.path.join(ROOT, 'public', 'textures')
     os.makedirs(out_dir, exist_ok=True)
