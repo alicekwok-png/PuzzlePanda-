@@ -333,11 +333,41 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
         <button className="icon-btn" onClick={onExit} aria-label={t('nav.backToLevelSelect')}>
           <img src="/icons/back.png" alt="" />
         </button>
-        <div className="level-title">
-          <span className="level-kicker">
-            {t('game.levelKicker', { n: level.id, size: board.size })}
-          </span>
-          {t(`chapters.${level.chapterKey}`)}
+        {/* 進度條由自己一行搬咗上嚟，坐喺原本擺關卡名嗰個位。
+            關卡名／格數／交換次數全部拎走 —— 玩緊嗰陣唔需要，
+            過關結算度全部都有。 */}
+        <div className="top-bar-progress">
+          <div
+            className="progress-bar-track"
+            role="progressbar"
+            aria-valuenow={progressPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t('game.progressAria')}
+          >
+            <div className="progress-bar-fill" style={{ width: `${progressPct}%` }} />
+            {MILESTONES.map((pct) => (
+              <span
+                key={pct}
+                className={`progress-milestone${progressPct >= pct ? ' is-reached' : ''}`}
+                style={{ left: `${pct}%` }}
+                aria-hidden="true"
+              >
+                <img src={`/icons/milestone-${pct}.webp`} alt="" />
+              </span>
+            ))}
+            {/* 星星旋鈕騎喺填充嘅前端跟住行。左右各收 12px（旋鈕半徑），
+                否則 0% 同 100% 嗰陣粒星會凸出軌道外面。 */}
+            <span
+              className="progress-knob"
+              style={{ left: `calc(12px + (100% - 24px) * ${progressPct} / 100)` }}
+            >
+              <Icon name="star" className="progress-knob-star" />
+            </span>
+          </div>
+          <p className="progress-count">
+            <b>{bonded}</b>/{totalBonds}
+          </p>
         </div>
         <div className="top-bar-actions">
           <button
@@ -395,51 +425,6 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
           >
             <img src="/icons/peek.png" alt="" />
             <span className="icon-btn-badge is-peek">{peeksLeft}</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="progress-row">
-        <div
-          className="progress-bar-track"
-          role="progressbar"
-          aria-valuenow={progressPct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={t('game.progressAria')}
-        >
-          <div className="progress-bar-fill" style={{ width: `${progressPct}%` }} />
-          {MILESTONES.map((pct) => (
-            <span
-              key={pct}
-              className={`progress-milestone${progressPct >= pct ? ' is-reached' : ''}`}
-              style={{ left: `${pct}%` }}
-              aria-hidden="true"
-            >
-              <img src={`/icons/milestone-${pct}.webp`} alt="" />
-            </span>
-          ))}
-          {/* 星星旋鈕騎喺填充嘅前端跟住行。左右各收 12px（旋鈕半徑），
-              否則 0% 同 100% 嗰陣粒星會凸出軌道外面壓住旁邊嘅藥丸。 */}
-          <span
-            className="progress-knob"
-            style={{ left: `calc(12px + (100% - 24px) * ${progressPct} / 100)` }}
-          >
-            <Icon name="star" className="progress-knob-star" />
-          </span>
-        </div>
-        <div className="progress-counts">
-          <p className="progress-label">
-            <b>{bonded}</b>/{totalBonds}
-          </p>
-          <p className="progress-moves">
-            {t('game.movesReadout')} <b>{moves}</b>
-          </p>
-          {/* 重新開始搬上嚟同兩粒藥丸排埋一行 —— 底部成條工具列因此可以
-              收起，慳返嗰 47px 全部俾棋盤。 */}
-          <button type="button" className="restart-chip" onClick={resetLevel}>
-            <Icon name="restart" className="restart-chip-icon" />
-            {t('game.restart')}
           </button>
         </div>
       </div>

@@ -27,39 +27,126 @@ const SFX = {
 
 let muted = false;
 let hapticsEnabled = true;
-const cache = new Map();
 
 export function setMuted(v) { muted = !!v; }
 export function setHapticsEnabled(v) { hapticsEnabled = !!v; }
 
+/* ==========================================================================
+   播放：Web Audio 為主，<audio> 元素做保底
+   --------------------------------------------------------------------------
+   ⚠️ 點解唔可以淨係用 new Audio() + cloneNode()（原本嘅做法）：
+   喺 iOS Safari / WKWebView，一個 media element 要「曾經喺用戶手勢入面
+   播過」先解鎖得到。cloneNode() 出嚟嘅係全新元素，永遠冇解鎖過，play()
+   會直接 reject NotAllowedError —— 而我哋 .catch 咗佢，所以係靜英英咁
+   完全冇聲，console 都冇嘢睇。Chrome 冇呢個限制，所以喺電腦上面試極都
+   正常，一裝落 iPhone 就冇曬音效。
+
+   Web Audio 冇呢個問題：只要個 AudioContext 喺手勢入面 resume 過一次，
+   之後幾多個 BufferSource 都播得到，而且天生支援重疊播放同變速
+   （連擊變調就係靠 playbackRate）。
+   ========================================================================== */
+
+let ctx = null;
+const buffers = new Map();   // name → AudioBuffer
+const elements = new Map();  // name → HTMLAudioElement（保底用）
+
+function ensureCtx() {
+  if (ctx) return ctx;
+  if (typeof window === 'undefined') return null;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  try {
+    ctx = new AC();
+  } catch {
+    ctx = null;
+  }
+  return ctx;
+}
+
+/**
+ * 解鎖音訊。一定要喺用戶手勢嘅同步流程入面行。
+ * 播一個 1 sample 嘅無聲 buffer —— 部分 iOS 版本淨係 resume() 唔算解鎖，
+ * 要真係經 destination 出過聲先算。
+ */
+export function unlockAudio() {
+  const c = ensureCtx();
+  if (!c) return;
+  try {
+    if (c.state !== 'running') c.resume().catch(() => {});
+    const src = c.createBufferSource();
+    src.buffer = c.createBuffer(1, 1, 22050);
+    src.connect(c.destination);
+    src.start(0);
+  } catch {
+    /* 解鎖失敗就靠下面 <audio> 保底 */
+  }
+}
+
+/* 唔用 { once: true }：App 由背景返嚟、或者接／拔耳機之後，iOS 會再次
+   suspend 個 context。每次撳都試一次，unlockAudio 本身有 state 檢查，
+   已經 running 就幾乎零成本。 */
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', unlockAudio, { capture: true, passive: true });
+  window.addEventListener('touchend', unlockAudio, { capture: true, passive: true });
+}
+
 /** 先載一次放進快取，避免第一次觸發時有延遲。檔案很小（1.6KB–110KB）。 */
 export function preloadSfx() {
-  if (typeof Audio === 'undefined') return;
+  if (typeof window === 'undefined') return;
+  const c = ensureCtx();
   for (const [name, file] of Object.entries(SFX)) {
-    if (!file || cache.has(name)) continue;
-    try {
-      const audio = new Audio(`/sfx/${file}`);
-      audio.preload = 'auto';
-      cache.set(name, audio);
-    } catch {
-      /* 載入失敗永遠不該影響遊戲 */
+    if (!file) continue;
+
+    // 保底路線：一個元素一個音效，唔 clone（clone 出嚟嘅喺 iOS 解鎖唔到）
+    if (!elements.has(name)) {
+      try {
+        const audio = new Audio(`/sfx/${file}`);
+        audio.preload = 'auto';
+        elements.set(name, audio);
+      } catch {
+        /* 載入失敗永遠不該影響遊戲 */
+      }
     }
+
+    if (!c || buffers.has(name)) continue;
+    fetch(`/sfx/${file}`)
+      .then((r) => r.arrayBuffer())
+      .then((buf) => c.decodeAudioData(buf))
+      .then((decoded) => buffers.set(name, decoded))
+      .catch(() => {
+        /* 解碼唔到就一路用保底路線 */
+      });
   }
 }
 
 function playSfx(name, { rate = 1 } = {}) {
   const file = SFX[name];
   if (muted || !file) return;
-  try {
-    let audio = cache.get(name);
-    if (!audio) {
-      audio = new Audio(`/sfx/${file}`);
-      cache.set(name, audio);
+
+  const c = ctx;
+  const buffer = buffers.get(name);
+  if (c && buffer) {
+    try {
+      if (c.state !== 'running') c.resume().catch(() => {});
+      const src = c.createBufferSource();
+      src.buffer = buffer;
+      src.playbackRate.value = rate;
+      src.connect(c.destination);
+      src.start(0);
+      return;
+    } catch {
+      /* 跌落保底路線 */
     }
-    // clone 才能讓同一個音效重疊播放（連續快速交換時不會被截斷）
-    const node = audio.cloneNode();
-    node.playbackRate = rate;
-    node.play().catch(() => {});
+  }
+
+  // 保底：仲未解碼完、或者部瀏覽器冇 Web Audio。
+  // 唔 clone —— 連續觸發會截斷上一次，但總好過冇聲。
+  try {
+    const audio = elements.get(name);
+    if (!audio) return;
+    audio.currentTime = 0;
+    audio.playbackRate = rate;
+    audio.play().catch(() => {});
   } catch {
     /* 音效失敗永遠不該影響遊戲 */
   }

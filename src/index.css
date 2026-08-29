@@ -82,13 +82,15 @@
   /* 棋盤上下所有嘢嘅總高度，用嚟反推棋盤最闊可以去到幾多。
      ⚠️ 改頂欄／進度列／廣告條嘅高度就要一齊改呢個數，否則棋盤會
      細過應有嘅尺寸（睇落就係「棋盤好窄」）。
-     現值 142 = 瀏覽器實測：頂欄 48 + 進度列 47 + 廣告條 50 = 145，
-     再減返棋盤外框 padding 換算落闊度嘅差額。改完一定要喺幾個尺寸
-     度量返棋盤有冇溢出（.board-mat 高度唔可以大過 .board-wrap）。
+     現值 100 = 瀏覽器實測：頂欄 44 + 廣告條 50 = 94，再留返幾格位。
+     （進度列已經冇咗 —— 進度條搬咗入頂欄，所以由 149 減到 100，
+     棋盤即刻闊咗成 30px。）
+     改完一定要喺幾個尺寸度量返棋盤有冇溢出（.board-mat 高度唔可以
+     大過 .board-wrap）。
      試過改用 container query（100cqh）自動量，但 .board-wrap 嘅高度
      係由一連串 flex + min-height 得出，唔算 definite，cqh 會解成 0，
      棋盤直接縮成一點。所以維持手寫常數。 */
-  --chrome-h: 149px;
+  --chrome-h: 100px;
 
   --r-sm: 12px;
   --r-md: 16px;
@@ -517,15 +519,45 @@ button:focus-visible,
 }
 
 /* ---------- 進度 ----------
-   設計：厚身 14px 條、內凹軌道、金色填充、25/50/75% 白色刻度、
-   一顆會跟住走的白色星星旋鈕。 */
-.progress-row {
+   進度條坐喺頂欄中間，原本擺關卡名嗰個位。關卡名／格數／交換次數／
+   重新開始全部拎走 —— 玩緊嗰陣唔需要（交換次數過關結算度有，重新開始
+   結算度有「再玩一次」），而且成條進度行慳返，全部俾咗棋盤。 */
+.top-bar-progress {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 8px 14px 4px;
-  flex: none;
+  /* 里程碑坐喺 14px 軌道上，上下各溢出 (26-14)/2 = 6px。呢個 gap 要大過
+     6，否則啲熊貓會壓住下面個數字。 */
+  gap: 11px;
+  padding: 0 6px;
 }
+
+/* 遊戲頂欄要塞 5 個掣 + 一條進度條。掣收細到 36px、間距收窄，
+   先夠位俾進度條 —— 條 bar 短過 160px 嘅話，三隻里程碑熊貓就會黐埋
+   一齊，睇唔到邊隻係邊隻。 */
+/* ⚠️ 一定要用 `>`：貼紙簿係 render 喺 .game-screen 入面嘅 overlay，
+   佢自己都有條 .top-bar。唔限死直屬子元素嘅話，呢啲收窄規則會漏埋落
+   貼紙簿嗰條頂欄度。 */
+.game-screen > .top-bar {
+  padding: 5px 8px 3px;
+  gap: 6px;
+}
+
+.game-screen > .top-bar .icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 13px;
+}
+
+.game-screen > .top-bar .icon-btn img,
+.game-screen > .top-bar .icon-btn .ui-icon,
+.game-screen > .top-bar .icon-btn .icon-btn-svg {
+  width: 19px;
+  height: 19px;
+}
+
+.game-screen > .top-bar .top-bar-actions { gap: 4px; }
 
 .progress-bar-track {
   position: relative;
@@ -546,19 +578,31 @@ button:focus-visible,
   transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.progress-count {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.9);
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke fill;
+  -webkit-text-stroke: 2.5px rgba(4, 6, 16, 0.5);
+}
+
 /* ---------- 里程碑 ----------
-   參考稿係擺喺條 bar 上面，但我哋垂直空間好緊 —— 條 bar 上面每加高
-   一格，棋盤就要窄返一截（棋盤闊度係由剩餘高度反推）。所以改成
-   「串珠」式坐喺 bar 上面，同粒星星旋鈕同一個語言，成行只高咗 4px。 */
+   28px 唔會令頂欄高咗 —— 佢係 absolute，喺 14px 軌道上下各溢出 7px，
+   而頂欄本身由 40px 嘅掣撐開，塞得落。細過 28px 三個姿態就分唔到。 */
 .progress-milestone {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  /* 28px 唔會令成行高咗 —— 佢係 absolute，喺 14px 嘅軌道上下各溢出 7px，
-     只係比粒星星旋鈕（24px）多溢出 2px。細過呢個尺寸，熊貓嘅姿態就
-     完全讀唔到，得返「一嚿黑白嘢」。 */
-  width: 28px;
-  height: 28px;
+  /* 26px：頂欄嗰條 bar 得百六 px，再大三隻熊貓就會黐埋一齊；
+     再細過呢個尺寸，三個姿態就分唔到，得返「一嚿黑白嘢」。 */
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: #2a2f5e;
   border: 2px solid rgba(253, 246, 232, 0.55);
@@ -593,67 +637,23 @@ button:focus-visible,
   100% { transform: translate(-50%, -50%) scale(1); }
 }
 
-/* 星星旋鈕跟住填充走。z-index 要高過里程碑 —— 行到嗰粒里程碑嗰陣
-   兩者會重疊，粒星要喺前面（睇落就係「星星行到咗呢一站」）。 */
+/* 星星旋鈕跟住填充走。z-index 高過里程碑 —— 行到嗰粒里程碑嗰陣兩者
+   會重疊，粒星要喺前面（睇落就係「星星行到咗呢一站」）。 */
 .progress-knob {
   z-index: 2;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #fff;
+  border: 2px solid var(--gold-shadow);
   box-shadow: 0 3px 0 rgba(4, 6, 16, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  line-height: 1;
   transition: left 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.progress-counts {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  padding: 0 2px;
-}
-
-/* 重新開始搬咗上嚟同兩粒藥丸排埋一行 —— 呢一行本來就有位，
-   收起咗底部成條工具列，慳返 47px 全部俾棋盤。 */
-.restart-chip {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(4, 6, 16, 0.3);
-  border: none;
-  border-radius: 999px;
-  padding: 3px 10px;
-  color: rgba(255, 255, 255, 0.9);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.restart-chip:active { background: rgba(4, 6, 16, 0.5); }
-
-.progress-label,
-.progress-moves {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 11px;
-  color: #fff;
-  background: rgba(4, 6, 16, 0.25);
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 /* ---------- 棋盤區 ---------- */
@@ -2054,7 +2054,6 @@ button:focus-visible,
 .album-pager-btn .ui-icon { width: 19px; height: 19px; }
 .album-viewer-close .ui-icon { width: 17px; height: 17px; }
 .tool-btn .ui-icon { width: 15px; height: 15px; }
-.restart-chip .ui-icon { width: 13px; height: 13px; }
 .settings-row-check .ui-icon { width: 15px; height: 15px; }
 .chapter-tile-lock .ui-icon { width: 26px; height: 26px; }
 .level-tile-number .ui-icon { width: 22px; height: 22px; }
@@ -2210,16 +2209,7 @@ button:focus-visible,
   -webkit-text-stroke: 2.5px rgba(4, 6, 16, 0.5);
 }
 
-/* ---------- 進度 ---------- */
-.progress-label,
-.progress-moves,
-.restart-chip {
-  border: 1.5px solid var(--outline-soft);
-}
 
-.progress-knob {
-  border: 2px solid var(--gold-shadow);
-}
 
 /* ---------- 連擊回饋 ---------- */
 .feedback-badge {
@@ -2252,14 +2242,14 @@ button:focus-visible,
 
   .game-body .board-wrap { padding: 0; }
 
-  /* 橫向嘅 chrome：頂欄 48 + 進度列 47 + 廣告條 50 + game-body 下邊 6
-     = 151，取 152 留一格位。呢個數唔啱嘅話廣告條會俾頂出畫面外。
+  /* 橫向嘅 chrome：頂欄 44 + 廣告條 50 + game-body 下邊 6 = 100，
+     取 106 留返幾格位。呢個數唔啱嘅話廣告條會俾頂出畫面外。
      5:8 直向棋盤喺橫向手機上本來就好細 —— 見 README 嘅鎖直向建議。 */
-  .board-mat { max-width: min(100%, calc((100svh - 152px) * 0.625)); }
+  .board-mat { max-width: min(100%, calc((100svh - 106px) * 0.625)); }
 
   .game-body.has-dock .board-mat {
     /* 橫向嗰陣工具列係擺喺右邊，唔食高度，所以唔使再扣 */
-    max-width: min(100%, calc((100svh - 152px) * 0.625));
+    max-width: min(100%, calc((100svh - 106px) * 0.625));
   }
 
   .game-body .game-foot { width: 132px; flex: none; justify-content: center; }
@@ -2268,7 +2258,6 @@ button:focus-visible,
   /* 直排時要收窄左右內距，否則「重新開始」會斷行變兩行 */
   .tool-btn { width: 100%; justify-content: center; padding: 10px 12px; white-space: nowrap; }
 
-  .progress-row { padding: 4px 16px 4px; }
 
   .level-grid { grid-template-columns: repeat(6, 1fr); }
   .chapter-grid { grid-template-columns: repeat(4, 1fr); }
