@@ -119,14 +119,33 @@ MAP_SIZE = (800, 1400)     # 直度。地圖面板嘅比例會隨機型變，所
 MAP_QUALITY = 78
 
 
+# 處理後想要嘅平均亮度（0–255）。太光就壓唔住上面啲節點同關數牌，
+# 太暗就睇唔出主題色。
+MAP_TARGET_LUM = 62
+
+
+def _sharpness(im):
+    """同自己嘅模糊版比較，估下張圖本身夠唔夠銳。數值細＝本身已經好朦。"""
+    from PIL import ImageChops, ImageFilter
+    small = im.resize((160, 280), Image.LANCZOS)
+    diff = ImageChops.difference(small, small.filter(ImageFilter.GaussianBlur(3)))
+    hist = diff.convert('L').histogram()
+    total = sum(hist)
+    return sum(i * n for i, n in enumerate(hist)) / total if total else 0
+
+
 def install_map(src_path, chapter_key):
     """裝一張章節主題背景落選關地圖。
 
-    ⚠️ 一定要壓暗同模糊：地圖上面有五個圓形關卡縮圖、虛線路徑同關數牌，
-    背景太清晰或者太光，嗰啲嘢就會沉晒落去睇唔到。呢度做嘅處理同 CSS 上面
+    ⚠️ 一定要夠朦同夠暗：地圖上面有五個圓形關卡縮圖、虛線路徑同關數牌，
+    背景太清晰或者太光，嗰啲嘢就會沉晒落去睇唔到。呢度嘅處理同 CSS 上面
     嗰層深色罩係疊加嘅 —— 兩者一齊先夠。
+
+    ⚠️ 但係唔可以硬套一個固定嘅模糊同壓暗值。設計交嚟嘅圖多數已經係
+    大幅柔焦 + 深沉色調，再壓一次就會黑到咩都睇唔到。所以呢度會先量度
+    張圖本身有幾銳、有幾光，再決定要加幾多 —— 已經夠朦夠暗就幾乎唔郁。
     """
-    from PIL import ImageEnhance, ImageFilter
+    from PIL import ImageEnhance, ImageFilter, ImageStat
 
     im = Image.open(src_path).convert('RGB')
     w, h = im.size
@@ -138,9 +157,18 @@ def install_map(src_path, chapter_key):
         nh = round(w / target)
         im = im.crop((0, (h - nh) // 2, w, (h - nh) // 2 + nh))
     im = im.resize(MAP_SIZE, Image.LANCZOS)
-    im = im.filter(ImageFilter.GaussianBlur(9))
-    im = ImageEnhance.Brightness(im).enhance(0.5)
+
+    sharp = _sharpness(im)
+    blur = 1.5 if sharp < 6 else (4 if sharp < 12 else 9)
+    if blur:
+        im = im.filter(ImageFilter.GaussianBlur(blur))
+
+    lum = ImageStat.Stat(im.convert('L')).mean[0]
+    # 只會壓暗，唔會調光 —— 調光會浮出雜訊同色階
+    factor = min(1.0, max(0.35, MAP_TARGET_LUM / lum)) if lum else 1.0
+    im = ImageEnhance.Brightness(im).enhance(factor)
     im = ImageEnhance.Color(im).enhance(1.15)
+    print(f'   （原圖銳度 {sharp:.1f} → 模糊 {blur}；亮度 {lum:.0f} → ×{factor:.2f}）')
 
     out_dir = os.path.join(ROOT, 'public', 'textures')
     os.makedirs(out_dir, exist_ok=True)
