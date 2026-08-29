@@ -30,6 +30,14 @@ const COMBO_TIER_KEYS = ['game.comboTier1', 'game.comboTier2', 'game.comboTier3'
 /** 拖曳判定死區：手指微抖不該被當成一次拖曳。 */
 const DRAG_DEADZONE_PX = 12;
 
+/* 進度條上面嘅里程碑。每個百分比對應 public/icons/milestone-<pct>.webp。
+   未行到就灰灰哋，行到就著返色同彈一下。
+
+   ⚠️ 而家嗰三張係暫代圖，由第 2 章嘅熊貓貼紙裁出嚟（起步／中段／歡呼）。
+   設計交正式圖之後，同名覆蓋 public/icons/milestone-{25,50,75}.webp 就得，
+   呢度唔使改。要加減里程碑就改呢個陣列同埋落多幾張圖。 */
+const MILESTONES = [25, 50, 75];
+
 export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) {
   const [board, setBoard] = useState(() => generateBoard(level.size));
   const [history, setHistory] = useState([]);
@@ -400,7 +408,16 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
           aria-label={t('game.progressAria')}
         >
           <div className="progress-bar-fill" style={{ width: `${progressPct}%` }} />
-          <span className="progress-tick" />
+          {MILESTONES.map((pct) => (
+            <span
+              key={pct}
+              className={`progress-milestone${progressPct >= pct ? ' is-reached' : ''}`}
+              style={{ left: `${pct}%` }}
+              aria-hidden="true"
+            >
+              <img src={`/icons/milestone-${pct}.webp`} alt="" />
+            </span>
+          ))}
           {/* 星星旋鈕騎喺填充嘅前端跟住行。左右各收 12px（旋鈕半徑），
               否則 0% 同 100% 嗰陣粒星會凸出軌道外面壓住旁邊嘅藥丸。 */}
           <span

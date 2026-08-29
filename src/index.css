@@ -546,25 +546,54 @@ button:focus-visible,
   transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* 25 / 50 / 75% 刻度 */
-.progress-bar-track::before,
-.progress-bar-track::after,
-.progress-tick {
-  content: '';
+/* ---------- 里程碑 ----------
+   參考稿係擺喺條 bar 上面，但我哋垂直空間好緊 —— 條 bar 上面每加高
+   一格，棋盤就要窄返一截（棋盤闊度係由剩餘高度反推）。所以改成
+   「串珠」式坐喺 bar 上面，同粒星星旋鈕同一個語言，成行只高咗 4px。 */
+.progress-milestone {
   position: absolute;
-  top: 3px;
-  bottom: 3px;
-  width: 2px;
-  background: rgba(255, 255, 255, 0.45);
-  border-radius: 2px;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #2a2f5e;
+  border: 2px solid rgba(253, 246, 232, 0.55);
+  box-shadow: 0 2px 0 rgba(4, 6, 16, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 1;
 }
 
-.progress-bar-track::before { left: 25%; }
-.progress-bar-track::after { left: 75%; }
-.progress-tick { left: 50%; }
+.progress-milestone img {
+  width: 132%;
+  height: 132%;
+  object-fit: contain;
+  /* 未行到：熄咗燈咁 */
+  filter: grayscale(1) brightness(0.55);
+  transition: filter 0.35s ease;
+}
 
-/* 星星旋鈕跟住填充走 */
+.progress-milestone.is-reached {
+  background: var(--gold);
+  border-color: var(--outline);
+  animation: milestonePop 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.progress-milestone.is-reached img { filter: none; }
+
+@keyframes milestonePop {
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  45%  { transform: translate(-50%, -50%) scale(1.45); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+/* 星星旋鈕跟住填充走。z-index 要高過里程碑 —— 行到嗰粒里程碑嗰陣
+   兩者會重疊，粒星要喺前面（睇落就係「星星行到咗呢一站」）。 */
 .progress-knob {
+  z-index: 2;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
