@@ -1,21 +1,11 @@
 /* 引擎測試： node --test src/game/engine.test.js  （或 npm test）
    ------------------------------------------------------------------
-   兩組重點：
-
-   ① 提示 —— 舊版揀「淨賺最多接合」嗰步，喺棋盤中間砌起一嚿擺錯位嘅
-      雲團一樣可以賺接合，跟住又要拆返，一路撳會兜圈永遠砌唔完。
-
-   ② 黐咗唔拆得開 —— Alice 報過「放一塊落去，砌好咗嗰嚿就散返開」。
-      接合係相對嘅：兩塊喺原圖上係鄰居就會黐，唔理成嚿擺喺邊。所以一嚿
-      黐好咗嘅嘢要成嚿一齊郁，而任何一步都唔准拆散佢。
-      下面幾個 case 就係守住呢條規矩同埋守住「永遠有得郁」。 */
+   重點測提示：舊版揀「淨賺最多接合」嗰步，喺棋盤中間砌起一嚿擺錯位
+   嘅雲團一樣可以賺接合，跟住又要拆返，一路撳會兜圈永遠砌唔完。
+   呢兩個 case 就係捉呢種情況。 */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  applyHint,
-  bondedDown,
-  bondedRight,
-  connectedCluster,
   bondCountsByPiece,
   bondProgress,
   computePlaced,
@@ -26,39 +16,32 @@ import {
   swapCells,
 } from './engine.js';
 
-test('一路撳提示，絕大部分局砌得完，而且成日見到「黐埋」', () => {
+test('一路撳提示一定砌得完，而且絕大部分步都見到「黐埋」', () => {
   let steps = 0;
   let bondSteps = 0;
-  let solved = 0;
-  const trials = 80;
-  for (let trial = 0; trial < trials; trial++) {
+  for (let trial = 0; trial < 300; trial++) {
     const size = 4 + (trial % 4);
     let board = generateBoard(size);
     let guard = 0;
-    while (!isSolved(board) && guard++ < 300) {
+    while (!isSolved(board) && guard++ < 500) {
       const hint = findHint(board);
-      if (!hint) break; // 走入咗死盤面（實測 1% 以下，見下面嘅斷言）
+      assert.ok(hint, `size ${size} 未砌好但搵唔到提示`);
       const before = bondProgress(board).bonded;
-      const next = applyHint(board, hint.from, hint.to);
-      assert.notStrictEqual(next, board, '提示畀咗一步落唔到嘅棋');
-      const after = bondProgress(next).bonded;
-      /* 冇任何一步拆得散接合，所以接合數只可以升唔可以跌。呢個係成套
-         規矩嘅基石 —— 跌咗即係有嘢拆散咗。 */
-      assert.ok(after >= before, `接合跌咗：${before}→${after}`);
-      board = next;
+      const beforePlaced = board.placed.size;
+      board = swapCells(board, hint.from, hint.to);
+      const after = bondProgress(board).bonded;
       steps++;
       if (after > before) bondSteps++;
+      assert.ok(
+        after > before || board.placed.size > beforePlaced,
+        `提示冇推進：接合 ${before}→${after}，歸位 ${beforePlaced}→${board.placed.size}`,
+      );
     }
-    if (isSolved(board)) solved++;
+    assert.ok(isSolved(board), `size ${size} 淨靠提示砌唔完（用咗 ${guard} 步）`);
   }
   const pct = Math.round((bondSteps / steps) * 100);
-  const solvedPct = Math.round((solved / trials) * 100);
-  console.log(`   ${steps} 步提示，其中 ${pct}% 即刻黐到；${solvedPct}% 局淨靠提示砌得完`);
-  /* ⚠️ 呢兩個門檻係相對接合（原圖鄰居就黐，唔理擺喺邊）之下嘅實測值，
-     唔係九成幾。絕對接合（砌啱位先黐）嗰陣可以去到 99%，但嗰個玩法冇咗
-     「兩塊啱嘅擺錯位都會黐埋」，Alice 明確要保留呢樣。 */
-  assert.ok(pct >= 40, `太多提示冇黐到嘢：只有 ${pct}%`);
-  assert.ok(solvedPct >= 80, `太多局淨靠提示砌唔完：只有 ${solvedPct}%`);
+  console.log(`   ${steps} 步提示，其中 ${pct}% 即刻黐到`);
+  assert.ok(pct >= 90, `太多提示冇黐到嘢：只有 ${pct}%`);
 });
 
 test('砌好之後冇提示可畀', () => {
@@ -98,116 +81,4 @@ test('真係黐到新嘢先算數', () => {
   const after = bondCountsByPiece(swapCells(board, 1, 5));
   const gained = after.map((c, id) => c - before[id]).filter((d) => d > 0);
   assert.ok(gained.length >= 2, `應該有至少兩塊多咗接合，實際 ${gained.length}`);
-});
-
-/* ==========================================================================
-   黐咗就唔拆得開
-   --------------------------------------------------------------------------
-   Alice 報嘅問題：砌好咗一嚿，放另一塊落去嗰嚿就會散返開。
-   呢組測試守住條規矩本身，同埋守住「唔會因為條規矩太硬而卡死」。
-   ========================================================================== */
-
-/** 而家棋盤上所有接合，用「邊兩塊」表示。 */
-function pairsOf(board) {
-  const { cells, size } = board;
-  const pairs = new Set();
-  for (let i = 0; i < cells.length; i++) {
-    if (bondedRight(cells, size, i)) pairs.add(`${cells[i]}-${cells[i + 1]}`);
-    if (bondedDown(cells, size, i)) pairs.add(`${cells[i]}-${cells[i + size]}`);
-  }
-  return pairs;
-}
-
-test('任何一步落得嘅棋，都唔會拆散本來黐住嘅塊', () => {
-  for (const size of [3, 4, 5]) {
-    for (let trial = 0; trial < 40; trial++) {
-      let board = generateBoard(size);
-      for (let step = 0; step < 40; step++) {
-        const from = Math.floor(Math.random() * board.cells.length);
-        const to = Math.floor(Math.random() * board.cells.length);
-        const next = moveGroup(board, from, to);
-        if (next === board) continue; // 呢步唔畀行
-        const before = pairsOf(board);
-        const after = pairsOf(next);
-        for (const pair of before) {
-          assert.ok(after.has(pair), `${size}×${size}：${from}→${to} 拆散咗 ${pair}`);
-        }
-        board = next;
-      }
-    }
-  }
-});
-
-test('提示行嘅步一樣唔會拆散', () => {
-  for (const size of [3, 4, 5]) {
-    for (let trial = 0; trial < 40; trial++) {
-      let board = generateBoard(size);
-      for (let step = 0; step < 40 && !isSolved(board); step++) {
-        const hint = findHint(board);
-        if (!hint) break; // 走入咗死盤面，另一個 test 守住頻率
-        const next = applyHint(board, hint.from, hint.to);
-        assert.notStrictEqual(next, board, '提示畀咗一步行唔到嘅棋');
-        const after = pairsOf(next);
-        for (const pair of pairsOf(board)) {
-          assert.ok(after.has(pair), `提示拆散咗 ${pair}`);
-        }
-        board = next;
-      }
-    }
-  }
-});
-
-test('無論點行都唔會行到一個一步都郁唔到嘅盤面', () => {
-  const anyMove = (board) => {
-    for (let from = 0; from < board.cells.length; from++) {
-      for (let to = 0; to < board.cells.length; to++) {
-        if (moveGroup(board, from, to) !== board) return true;
-      }
-    }
-    return false;
-  };
-  for (const size of [3, 4, 5]) {
-    for (let trial = 0; trial < 20; trial++) {
-      let board = generateBoard(size);
-      assert.ok(anyMove(board) || isSolved(board), `${size}×${size}：開局就死`);
-      for (let step = 0; step < 60 && !isSolved(board); step++) {
-        const from = Math.floor(Math.random() * board.cells.length);
-        const to = Math.floor(Math.random() * board.cells.length);
-        const next = moveGroup(board, from, to);
-        if (next === board) continue;
-        board = next;
-        assert.ok(anyMove(board) || isSolved(board), `${size}×${size}：行到第 ${step} 步死咗`);
-      }
-    }
-  }
-});
-
-test('拖一嚿黐好咗嘅嘢，成嚿一齊郁，內部接合原封不動', () => {
-  for (const size of [3, 4, 5]) {
-    for (let trial = 0; trial < 30; trial++) {
-      let board = generateBoard(size);
-      for (let i = 0; i < size * size / 2 && !isSolved(board); i++) {
-        const hint = findHint(board);
-        if (!hint) break;
-        board = applyHint(board, hint.from, hint.to);
-      }
-      // 搵一嚿有多過一塊嘅
-      let group = null;
-      for (let pos = 0; pos < board.cells.length; pos++) {
-        const c = connectedCluster(board, pos);
-        if (c.size > 1) { group = { pos, cells: c }; break; }
-      }
-      if (!group) continue;
-
-      const before = pairsOf(board);
-      for (let to = 0; to < board.cells.length; to++) {
-        const next = moveGroup(board, group.pos, to);
-        if (next === board) continue; // 呢步唔畀行
-        const after = pairsOf(next);
-        for (const pair of before) {
-          assert.ok(after.has(pair), `${size}×${size}：整嚿搬走之後 ${pair} 散咗`);
-        }
-      }
-    }
-  }
 });

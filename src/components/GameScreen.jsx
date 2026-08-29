@@ -5,12 +5,11 @@ import {
   bondsAt,
   computePlaced,
   connectedCluster,
-  applyHint,
-  canMoveGroup,
   findHint,
   generateBoard,
   isSolved,
   moveGroup,
+  swapCells,
   solvedBoard,
 } from '../game/engine';
 import { claimDailyMission, consumeBonusHints, loadProgress, markLevelComplete } from '../game/storage';
@@ -172,15 +171,9 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setDropCells(previewDestination(posFromClient(e.clientX, e.clientY)));
   }
 
-  /**
-   * 預覽這一嚿會落在哪幾格；出界或者放唔落就回傳空集合（一格都唔亮）。
-   *
-   * 「放唔落」＝呢步會拆散人哋已經黐好咗嘅嘢。唔亮落點就係話畀玩家聽
-   * 呢度放唔得 —— 唔使另外出錯誤訊息。
-   */
+  /** 預覽這一嚿會落在哪幾格；出界就回傳空集合（一格都唔亮）。 */
   function previewDestination(target) {
     if (target == null || dragGroup.size === 0) return new Set();
-    if (!canMoveGroup(board, draggingPos, target)) return new Set();
     const size = board.size;
     const dRow = Math.floor(target / size) - Math.floor(draggingPos / size);
     const dCol = (target % size) - (draggingPos % size);
@@ -317,10 +310,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setHintsLeft((h) => h - 1);
     setHintsUsed((n) => n + 1);
     feedback.hint();
-    /* ⚠️ 行 applyHint 唔行 moveGroup：提示搬嘅係成嚿黐好咗嘅嘢（所以
-       更加唔可以用兩格交換），而且要跳過 moveGroup 嗰個「唔好封死自己」
-       檢查 —— 提示係救命掣，撳完一定要有嘢發生。 */
-    commitBoard(applyHint(board, found.from, found.to));
+    commitBoard(swapCells(board, found.from, found.to));
   }
 
   /* ⚠️ 收 peek 嘅保險：只要 peeking 係 true，就喺 window 度聽鬆手。

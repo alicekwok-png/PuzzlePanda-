@@ -45,7 +45,7 @@ export function computePlaced(cells) {
    接合判斷
    --------------------------------------------------------------------------- */
 
-/** 第 i 格與它右邊那格是否接合（原圖上係鄰居就算，唔理擺喺邊）。 */
+/** 第 i 格與它右邊那格是否接合。 */
 export function bondedRight(cells, size, i) {
   if (i % size === size - 1) return false; // 棋盤上已經在最右一列
   const a = cells[i];
@@ -116,9 +116,6 @@ export function bondProgress(board) {
  * 接合數就會由 0 升上去，被誤當成「啱啱黐到新嘢」—— 結果玩家一路拖
  * 一嚿砌好咗嘅嘢周圍行，就會一路彈 Excellent。
  * 按塊數就冇呢個問題：整嚿平移，每一塊嘅接合數都完全冇變。
- *
- * （註：接合改成「砌啱位先黐」之後已經冇整嚿平移，但呢個按塊數嘅寫法
- * 一樣啱，而且唔會因為將來再改動作模式而出返個 bug，所以保留。）
  */
 export function bondCountsByPiece(board) {
   const counts = new Array(board.cells.length).fill(0);
@@ -168,39 +165,16 @@ export function indexToRowCol(index, size) {
   return { row: Math.floor(index / size), col: index % size };
 }
 
-/** 而家棋盤上所有接合，用「邊兩塊」表示（唔係「邊兩格」）。 */
-function bondPairs(cells, size) {
-  const pairs = new Set();
-  for (let i = 0; i < cells.length; i++) {
-    if (bondedRight(cells, size, i)) pairs.add(`${cells[i]}-${cells[i + 1]}`);
-    if (bondedDown(cells, size, i)) pairs.add(`${cells[i]}-${cells[i + size]}`);
-  }
-  return pairs;
-}
-
-/** 呢個新盤面有冇拆散咗本來黐好嘅嘢？ */
-function breaksBond(beforeCells, afterCells, size) {
-  const after = bondPairs(afterCells, size);
-  for (const pair of bondPairs(beforeCells, size)) {
-    if (!after.has(pair)) return true;
-  }
-  return false;
-}
-
 /**
- * 計一次整嚿平移嘅結果；唔合法就回傳 null。
+ * 整嚿平移。拖動任何一格，會把它所屬的整個 cluster 一起搬走。
  *
- * 被頂走嘅塊行**鏡像平移**：我哋嗰嚿行 +delta，佢哋整嚿行 −delta。咁樣
- * 佢哋之間嘅相對位置完全冇變，自己黐好咗嘅嘢原封不動咁搬過去。
- *
- * 平移重疊自己嘅情況（例如一條橫三格向右推一格）冇得一步行 −delta，就沿
- * 住 srcOf 一路行返上去直到落喺讓返出嚟嘅格 —— 即係一個循環推移。
- *
- * 最後守多一關：只要有一對本來黐住嘅塊斷開咗就唔算數。剩返嘅係「一嚿嘢
- * 淨係有半邊被頂到」，嗰種點排都一定會拆散，唯有唔畀放。
+ * - 位移量由 from → to 決定，整嚿剛性平移，形狀不變。
+ * - 任何一格會被推出邊界就整個動作取消（回傳原本的 board）。
+ * - 目的地原本的格被擠出來，填回這嚿騰空的位置。
+ * - 因為接合是相對關係，平移之後 cluster 內部的接合完全保留。
  */
-function tryMoveGroup(board, from, to) {
-  if (from === to) return null;
+export function moveGroup(board, from, to) {
+  if (from === to) return board;
   const group = connectedCluster(board, from);
 
   const { size } = board;
@@ -211,144 +185,72 @@ function tryMoveGroup(board, from, to) {
   for (const cell of group) {
     const row = Math.floor(cell / size) + dRow;
     const col = (cell % size) + dCol;
-    if (row < 0 || row >= size || col < 0 || col >= size) return null; // 出界
+    if (row < 0 || row >= size || col < 0 || col >= size) return board; // 出界，整嚿不動
     destOf.set(cell, row * size + col);
   }
 
-  const srcOf = new Map();
-  for (const [src, dst] of destOf) srcOf.set(dst, src);
-
+  const destSet = new Set(destOf.values());
   const cells = [...board.cells];
-  for (const [src, dst] of destOf) cells[dst] = board.cells[src];
-  for (const dst of destOf.values()) {
-    if (group.has(dst)) continue;
-    let landing = dst;
-    while (srcOf.has(landing)) landing = srcOf.get(landing);
-    cells[landing] = board.cells[dst];
-  }
+  const displaced = [...destSet].filter((d) => !group.has(d)).sort((a, b) => a - b).map((d) => board.cells[d]);
+  const vacated = [...group].filter((g) => !destSet.has(g)).sort((a, b) => a - b);
 
-  if (breaksBond(board.cells, cells, size)) return null;
+  for (const [src, dst] of destOf) cells[dst] = board.cells[src];
+  vacated.forEach((cell, i) => {
+    cells[cell] = displaced[i];
+  });
+
   return { ...board, cells, placed: computePlaced(cells) };
 }
 
-/** 呢個盤面仲有冇任何一步行得？ */
-function hasLegalMove(board) {
-  const n = board.cells.length;
-  for (let from = 0; from < n; from++) {
-    for (let to = 0; to < n; to++) {
-      if (tryMoveGroup(board, from, to)) return true;
-    }
-  }
-  return false;
-}
-
-/** 落完之後仲有得郁先至畀行 —— 唔係會行到一個一步都郁唔到嘅死盤面。 */
-function safeMove(board, from, to) {
-  const next = tryMoveGroup(board, from, to);
-  if (!next) return null;
-  if (isSolved(next) || hasLegalMove(next)) return next;
-  return null;
-}
-
-/** 呢步落唔落得？（畀 UI 用嚟決定亮唔亮落點） */
-export function canMoveGroup(board, from, to) {
-  return safeMove(board, from, to) !== null;
-}
-
-export function moveGroup(board, from, to) {
-  return safeMove(board, from, to) ?? board;
-}
-
 /**
- * 落一步提示。同 moveGroup 嘅分別淨係跳過「唔好封死自己」嗰個檢查 ——
- * 提示係玩家嘅救命掣，次數有限，寧願畀佢行一步差啲嘅，都好過撳完乜都
- * 唔發生。照樣唔會拆散任何嘢（tryMoveGroup 自己守住）。
- */
-export function applyHint(board, from, to) {
-  return tryMoveGroup(board, from, to) ?? board;
-}
-
-/**
- * 揀一步提示。
+ * 提示 = 直接幫玩家黐埋，唔係淨係著燈。
  *
- * 一嚿黐好咗嘅塊內部一定係啱嘅，所以每一塊嘅「格 − 塊」偏移都係同一個
- * （offset）。即係話成嚿嘢淨係差一個平移就返到屋企。舊版做兩格交換，一
- * 交換就會拆散人哋黐好咗嘅嘢 —— 而家「黐咗唔拆得開」係硬規矩，提示自己
- * 更加唔可以犯規。
+ * ⚠️ 呢個係整個提示功能嘅重點，改之前睇清楚。
  *
- * 排優先次序（唔好撈埋一齊用加權公式，試過會兜圈）：
- *   ① 真係黐到嘢 —— 冇任何一步拆得散接合，所以接合數只升唔跌，即係話
- *      呢種步係永久進度，而接合數有上限，所以一定行得完。
- *   ② 黐唔到就搬一嚿返屋企 —— 歸位格數淨增。
- *   ③ 兩樣都做唔到（互相擋住）先至泊位。
+ * 做法：每一次都揀一塊擺返佢自己嗰格，而且揀「擺落去即刻黐到最多邊」
+ * 嗰一塊。所以正確嗰一嚿會由一個起點一路向外生 —— 每撳一次都見到有
+ * 嘢黐埋，唔係淨係郁咗一格。
+ *
+ * 點解唔揀「淨賺最多接合」嗰步（喺任何位置砌起一嚿都計）：嗰種揀法
+ * 唔保證會收斂。喺棋盤中間砌起一嚿擺錯位嘅雲團一樣可以賺好多接合，
+ * 跟住又要拆返佢，一路撳會兜圈。而家用「已歸位格數」做推進指標，佢
+ * 每一步都嚴格加至少一格，所以最多 N² 步一定砌完。
+ *
+ * 唯一一次唔會黐到嘢係開局第一撳（成盤都未有一格啱，冇嘢可以黐）。
+ * 之後每一撳都必定至少黐到一條邊 —— 只要仲有未砌好嘅格，正確嗰嚿嘅
+ * 邊界就一定有隔籬位可以填。
+ *
+ * 回傳 { from, to }：from = 嗰塊而家喺邊，to = 佢應該去邊（= 佢嘅 id）。
  */
 export function findHint(board) {
   const { cells, size } = board;
 
-  /* 逐嚿試「整嚿搬返屋企」。
-     ⚠️ 試過再加「搬到同另一嚿 offset 一樣」（＝兩嚿貼埋就會黐）做候選，
-     以為可以令提示更加次次都黐到嘢，結果啱啱相反：黐到嘢嘅比例由五成幾
-     跌到 8%，每局提示步數由 37 升到 155。原因係接合數只升唔跌、上限得
-     咁多，一旦去到「冇一步黐得到」嘅階段，多出嚟嗰堆候選全部係泊位，
-     只會令兜圈更長。唔好再加。 */
-  const candidates = [];
-  const seen = new Set();
+  const posOf = new Array(cells.length);
+  cells.forEach((pieceId, pos) => {
+    posOf[pieceId] = pos;
+  });
+
+  let best = -1;
+  let pool = [];
+
   for (let pos = 0; pos < cells.length; pos++) {
-    if (seen.has(pos)) continue;
-    for (const c of connectedCluster(board, pos)) seen.add(c);
-    const delta = pos - cells[pos]; // 成嚿共用同一個 delta
-    if (delta === 0) continue;      // 已經喺屋企
-    const next = safeMove(board, pos, pos - delta);
-    if (next) candidates.push({ from: pos, to: pos - delta, board: next });
-  }
+    if (cells[pos] === pos) continue; // 已經喺正確位置
+    const from = posOf[pos];
+    const next = [...cells];
+    [next[pos], next[from]] = [next[from], next[pos]];
 
-  /* 一嚿都搬唔返屋企（互相半嵌住咁擋住）就退到任何一步合法嘅泊位。
-     ⚠️ safeMove 係 O(n³)，所以搵夠一批就收手。 */
-  if (candidates.length === 0) {
-    outer: for (let from = 0; from < cells.length; from++) {
-      for (let to = 0; to < cells.length; to++) {
-        /* ⚠️ 一定要用 safeMove，唔可以用 tryMoveGroup —— moveGroup 收
-           嘅係 safeMove，用鬆啲嗰個會畀出一步 moveGroup 自己拒絕嘅棋，
-           玩家撳咗提示但盤面文風不動。 */
-        const next = safeMove(board, from, to);
-        if (next) {
-          candidates.push({ from, to, board: next });
-          if (candidates.length >= 12) break outer;
-        }
-      }
+    const b = bondsAt({ cells: next, size }, pos);
+    const gained = (b.up ? 1 : 0) + (b.down ? 1 : 0) + (b.left ? 1 : 0) + (b.right ? 1 : 0);
+
+    if (gained > best) {
+      best = gained;
+      pool = [{ from, to: pos }];
+    } else if (gained === best) {
+      pool.push({ from, to: pos });
     }
   }
-  /* 連一步「唔會封死自己」嘅都搵唔到（實測 4×4 大約 0.6% 局會撞到）。
-     呢陣寧願畀一步差啲嘅，都好過個掣撳咗盤面文風不動 —— 玩家會以為隻
-     game 壞咗。用 applyHint 落，佢跳過個安全檢查。 */
-  if (candidates.length === 0) {
-    outer2: for (let from = 0; from < cells.length; from++) {
-      for (let to = 0; to < cells.length; to++) {
-        const next = tryMoveGroup(board, from, to);
-        if (next) {
-          candidates.push({ from, to, board: next });
-          if (candidates.length >= 12) break outer2;
-        }
-      }
-    }
-  }
-  if (candidates.length === 0) return null; // 已經砌好
 
-  const beforeBonds = bondPairs(cells, size).size;
-  const beforePlaced = board.placed.size;
-  const bondGain = (c) => bondPairs(c.board.cells, size).size - beforeBonds;
-  const placedGain = (c) => c.board.placed.size - beforePlaced;
-
-  let pool = candidates.filter((c) => bondGain(c) > 0);
-  if (pool.length > 0) {
-    const best = Math.max(...pool.map(bondGain));
-    pool = pool.filter((c) => bondGain(c) === best);
-  } else {
-    pool = candidates.filter((c) => placedGain(c) > 0);
-    if (pool.length === 0) pool = candidates;
-  }
-
+  if (pool.length === 0) return null; // 已經砌好
   // 打和就隨機，唔好次次都由同一個角落開始
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  return { from: pick.from, to: pick.to };
+  return pool[Math.floor(Math.random() * pool.length)];
 }
