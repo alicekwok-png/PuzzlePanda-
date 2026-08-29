@@ -13,6 +13,7 @@
 """
 import math
 import os
+import re
 import sys
 
 from PIL import Image
@@ -26,19 +27,29 @@ IMAGES = os.path.join(os.path.dirname(__file__), '..', 'public', 'images', 'chap
 SAMPLE = 16  # 每格取樣邊長
 
 
+def load_curve():
+    """由 src/game/levels.js 讀返難度曲線。
+
+    以前呢度自己抄一份 grid_size()，每次調難度都要記住兩邊一齊改，
+    唔記得就會拎住舊格數去算，出嚟嘅指數係錯㗎。而家直接讀返個表。
+    """
+    js = os.path.join(os.path.dirname(__file__), '..', 'src', 'game', 'levels.js')
+    with open(js, encoding='utf-8') as f:
+        src = f.read()
+    m = re.search(r'const CURVE = \[(.*?)\n\];', src, re.S)
+    if not m:
+        raise SystemExit('喺 levels.js 搵唔到 CURVE —— 個表改咗格式？')
+    pairs = re.findall(r'\[\s*(\d+)\s*,\s*(\d+)\s*\]', m.group(1))
+    if len(pairs) != 50:
+        raise SystemExit(f'CURVE 應該有 50 關，讀到 {len(pairs)} 關')
+    return [(int(a), int(b)) for a, b in pairs]
+
+
+CURVE = load_curve()
+
+
 def grid_size(level):
-    """必須跟 src/game/levels.js 的 tierConfig 保持一致，改一邊記得改另一邊。"""
-    if level <= 2:
-        return 4
-    if level <= 5:
-        return 5
-    if level == 6:
-        return 6
-    if level <= 12:
-        return 7
-    if 41 <= level <= 45:  # 第 9 章星空整章下調，見 design/difficulty-tuning-spec.md
-        return 6
-    return 7
+    return CURVE[level - 1][0]
 
 
 def cell_descriptors(path, n):
