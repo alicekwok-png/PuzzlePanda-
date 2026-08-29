@@ -33,10 +33,10 @@ const PEEKS_PER_LEVEL = 3;
 
 function tierConfig(levelNumber) {
   if (levelNumber <= 2) return { size: 4, hints: 3 };
-  /* 第 3、4 關都係 5×5。第 4 關本來 6×6，實測太跳 —— 由 16 格一下子
-     跳到 36 格，玩家喺呢度就卡死。中間補多一級 25 格先順。 */
-  if (levelNumber <= 4) return { size: 5, hints: 3 };
-  if (levelNumber <= 6) return { size: 6, hints: 2 };
+  /* 第 3–5 關都係 5×5 / 3 提示。第 4、5 關本來 6×6 / 2 提示，實測太跳 ——
+     由 16 格一下子跳到 36 格，玩家喺呢度就卡死。中間鋪多幾關 25 格先順。 */
+  if (levelNumber <= 5) return { size: 5, hints: 3 };
+  if (levelNumber === 6) return { size: 6, hints: 2 };
   if (levelNumber <= 12) return { size: 7, hints: 2 };
   /* 第 9 章「星空」（第 41–45 關）整章下調：7×7/1 提示 → 6×6/2 提示。
      不是單一關卡的問題，是整章結構性偏難 —— 整幅都是星點、對比色差細，

@@ -30,9 +30,9 @@ def grid_size(level):
     """必須跟 src/game/levels.js 的 tierConfig 保持一致，改一邊記得改另一邊。"""
     if level <= 2:
         return 4
-    if level <= 4:
+    if level <= 5:
         return 5
-    if level <= 6:
+    if level == 6:
         return 6
     if level <= 12:
         return 7
