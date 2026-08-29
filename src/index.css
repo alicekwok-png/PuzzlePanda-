@@ -82,8 +82,8 @@
   /* 棋盤上下所有嘢嘅總高度，用嚟反推棋盤最闊可以去到幾多。
      ⚠️ 改頂欄／進度列／廣告條嘅高度就要一齊改呢個數，否則棋盤會
      細過應有嘅尺寸（睇落就係「棋盤好窄」）。
-     現值 174 = 頂欄 68（掣 50 + 上下邊距 18）+ 進度行 62（軌道 18 +
-     gap 14 + 數字 14 + 上下邊距 16）+ 廣告條 50 = 180，減返棋盤外框
+     現值 182 = 頂欄 76（掣 58 + 上下邊距 18）+ 進度行 62（軌道 18 +
+     gap 14 + 數字 14 + 上下邊距 16）+ 廣告條 50 = 188，減返棋盤外框
      padding 換算落闊度嘅差額 6。
      ⚠️ 掣放大、進度條搬出嚟自己一行之後呢個數大咗好多。唔跟住加嘅話
      棋盤會計大咗撞落廣告條度。
@@ -92,7 +92,7 @@
      試過改用 container query（100cqh）自動量，但 .board-wrap 嘅高度
      係由一連串 flex + min-height 得出，唔算 definite，cqh 會解成 0，
      棋盤直接縮成一點。所以維持手寫常數。 */
-  --chrome-h: 174px;
+  --chrome-h: 182px;
 
   --r-sm: 12px;
   --r-md: 16px;
@@ -814,19 +814,23 @@ button:focus-visible,
   gap: 8px;
 }
 
-/* 4 粒掣 + 一條進度條。50px 係喺「icon 睇得清」同「條 bar 唔好短過
-   130px（短過就三隻里程碑熊貓黐埋）」之間嘅平衡點。 */
+/* 進度條搬咗落自己一行之後，頂欄淨返四粒掣，橫向位好鬆。
+   掣維持 58px（再大就開始逼住上面嘅安全區），但入面張圖由 27px 推到
+   42px —— 之前 50px 嘅掣淨係擺 27px 圖，一半以上係白費嘅內距，插畫縮
+   到咁細根本睇唔出係咩。
+   ⚠️ 改掣嘅高度就要一齊改 --chrome-h，唔係棋盤會計錯闊度。而家 58px
+   對應 --chrome-h: 182px。張圖本身唔撐高粒掣，所以改幾多都得。 */
 .game-screen > .top-bar .icon-btn {
-  width: 50px;
-  height: 50px;
-  border-radius: 17px;
+  width: 58px;
+  height: 58px;
+  border-radius: 19px;
 }
 
 .game-screen > .top-bar .icon-btn img,
 .game-screen > .top-bar .icon-btn .ui-icon,
 .game-screen > .top-bar .icon-btn .icon-btn-svg {
-  width: 27px;
-  height: 27px;
+  width: 42px;
+  height: 42px;
 }
 
 /* 掣大咗，徽章都要跟住大，否則數字細到睇唔到 */
@@ -2760,15 +2764,15 @@ button:focus-visible,
   .game-body .board-wrap { padding: 0; }
 
   /* 橫向嘅 chrome：頂欄 68 + 進度行 62 + 廣告條 50 + game-body 下邊 6
-     = 186，減返棋盤外框換算差額 6 → 180。
+     = 194，減返棋盤外框換算差額 6 → 188。（掣 50→58，頂欄 68→76）
      ⚠️ 呢個數同上面嘅 --chrome-h 要一齊維護 —— 掣放大同進度條搬出嚟
      自己一行之後兩個都大咗，漏改就會頂到廣告條出畫面外。
      5:8 直向棋盤喺橫向手機上本來就好細 —— 見 README 嘅鎖直向建議。 */
-  .board-mat { max-width: min(100%, calc((100svh - 180px) * 0.625)); }
+  .board-mat { max-width: min(100%, calc((100svh - 188px) * 0.625)); }
 
   .game-body.has-dock .board-mat {
     /* 橫向嗰陣工具列係擺喺右邊，唔食高度，所以唔使再扣 */
-    max-width: min(100%, calc((100svh - 180px) * 0.625));
+    max-width: min(100%, calc((100svh - 188px) * 0.625));
   }
 
   .game-body .game-foot { width: 132px; flex: none; justify-content: center; }
