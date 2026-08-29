@@ -9,6 +9,7 @@ import {
   generateBoard,
   isSolved,
   moveGroup,
+  solvedBoard,
   swapCells,
 } from '../game/engine';
 import { claimDailyMission, consumeBonusHints, loadProgress, markLevelComplete } from '../game/storage';
@@ -44,13 +45,22 @@ const DRAG_DEADZONE_PX = 12;
 const MILESTONES = [25, 50, 75];
 
 export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) {
-  const [board, setBoard] = useState(() => generateBoard(level.size));
+  /* 完成過嘅關卡再入嚟，唔會重新打亂 —— 直接見返完整幅相，想玩先撳重玩。
+     GameScreen 喺 App 度用 level.id 做 key，換關會重新 mount，所以入嚟
+     讀一次就夠。 */
+  const [initiallyDone] = useState(() => !!loadProgress().completed[level.id]);
+  const [reviewing, setReviewing] = useState(initiallyDone);
+  const [board, setBoard] = useState(() =>
+    initiallyDone ? solvedBoard(level.size) : generateBoard(level.size),
+  );
   const [history, setHistory] = useState([]);
   const [moves, setMoves] = useState(0);
   /* 做完每日任務攞到嘅額外提示，開關嗰陣一次過加落嚟然後清零（用完即銷）。
+     ⚠️ 淨係喺真係要玩嗰陣先攞。入去睇返完整幅相唔應該食咗人哋個獎勵
+     —— 佢乜都未玩過。撳重玩先至 consume（見 startPlaying）。
      ⚠️ 用 useState 嘅 initialiser 而唔係 useEffect —— useEffect 喺 React
      StrictMode 開發模式會行兩次，bonus 就會俾人食咗兩次。 */
-  const [bonusHints] = useState(consumeBonusHints);
+  const [bonusHints, setBonusHints] = useState(() => (initiallyDone ? 0 : consumeBonusHints()));
   const [hintsLeft, setHintsLeft] = useState(() => level.hints + bonusHints);
   /* 每日任務「零提示過關」要知呢一鋪用咗幾多次 —— 唔可以由 hintsLeft 倒推，
      因為初始值會俾 bonus 加大咗。 */
@@ -96,12 +106,22 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     };
   }, []);
 
-  function resetLevel() {
+  /** 由「睇返完整幅相」轉去真係玩。呢一刻先攞 bonus hint。 */
+  function startPlaying() {
+    feedback.tap();
+    const bonus = consumeBonusHints();
+    setBonusHints(bonus);
+    setReviewing(false);
+    resetLevel(bonus);
+  }
+
+  /** @param bonus 開新一鋪要加幾多 bonus hint。「重新開始」傳 undefined
+   *  —— 開關嗰陣攞過嘅唔會再攞多次。 */
+  function resetLevel(bonus = bonusHints) {
     setBoard(generateBoard(level.size));
     setHistory([]);
     setMoves(0);
-    /* 重新開始唔會再攞多次 bonus —— 開關嗰陣已經清零咗 */
-    setHintsLeft(level.hints + bonusHints);
+    setHintsLeft(level.hints + bonus);
     setHintsUsed(0);
     setPeeksLeft(level.peeks);
     setPeeking(false);
@@ -394,6 +414,17 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
         {/* 進度條由自己一行搬咗上嚟，坐喺原本擺關卡名嗰個位。
             關卡名／格數／交換次數全部拎走 —— 玩緊嗰陣唔需要，
             過關結算度全部都有。 */}
+        {/* 睇返完整幅相嗰陣冇進度可言，個位攞返嚟擺關卡名。 */}
+        {reviewing && (
+          <div className="level-title">
+            <span className="level-kicker">
+              {t('game.levelKicker', { n: level.id, size: board.size })}
+            </span>
+            {t(`chapters.${level.chapterKey}`)}
+          </div>
+        )}
+
+        {!reviewing && (
         <div className="top-bar-progress">
           <div
             className="progress-bar-track"
@@ -427,7 +458,12 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
             <b>{bonded}</b>/{totalBonds}
           </p>
         </div>
+        )}
         <div className="top-bar-actions">
+          {/* 睇返完整幅相嗰陣，復原／重新開始／提示／睇圖全部冇意義，
+              淨係留返貼紙簿。 */}
+          {!reviewing && (
+          <>
           <button
             className="icon-btn"
             onClick={handleUndo}
@@ -441,7 +477,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
               兩個都用圓圈箭嘴嘅話玩家會當佢哋係同一樣嘢。
               擺喺復原隔籬（兩個都係「返轉頭」類），刻意唔擺最右
               —— 最右最易撳到，而重新開始係唔可以 undo 嘅。 */}
-          <button className="icon-btn" onClick={resetLevel} aria-label={t('game.restart')}>
+          <button className="icon-btn" onClick={() => resetLevel()} aria-label={t('game.restart')}>
             <Icon name="shuffle" className="icon-btn-svg" />
           </button>
 
@@ -456,6 +492,9 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
             <img src="/icons/hint.png" alt="" />
             <span className="icon-btn-badge">{hintsLeft}</span>
           </button>
+
+          </>
+          )}
 
           {/* 貼紙簿。⚠️ 用 inline SVG 線稿，唔用 emoji 都唔用彩色插畫 ——
               要同隔籬 back / undo / hint / peek 嗰幾個單色線稿 icon 同一
@@ -480,6 +519,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
           </button>
 
           {/* 睇圖：撳住先顯示，鬆手即收 —— 不是 toggle */}
+          {!reviewing && (
           <button
             className="icon-btn"
             onPointerDown={handlePeekStart}
@@ -494,10 +534,11 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
             <img src="/icons/peek.png" alt="" />
             <span className="icon-btn-badge is-peek">{peeksLeft}</span>
           </button>
+          )}
         </div>
       </div>
 
-      <div className={`game-body${hintsLeft <= 0 ? ' has-dock' : ''}`}>
+      <div className={`game-body${!reviewing && hintsLeft <= 0 ? ' has-dock' : ''}`}>
         <div className="board-wrap">
           {feedbackMsg && (
             <div className="feedback-badge" key={feedbackMsg.key}>
@@ -505,7 +546,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
               {feedbackMsg.comboCount > 1 && <span className="feedback-combo">×{feedbackMsg.comboCount}</span>}
             </div>
           )}
-          <div className={`board-mat${solvedFlash ? ' is-complete' : ''}`}>
+          <div className={`board-mat${solvedFlash || reviewing ? ' is-complete' : ''}`}>
             <div
               className="board"
               ref={boardRef}
@@ -524,7 +565,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
                   placed={board.placed.has(position)}
                   /* 砌完之後唔再畫任何格線 —— 成幅相要乾乾淨淨咁
                      喺白框入面，同結算畫面嗰張相卡接得返上。 */
-                  bonds={solvedFlash ? null : bondsAt(board, position)}
+                  bonds={solvedFlash || reviewing ? null : bondsAt(board, position)}
                   justBonded={justBonded.has(position)}
                   /* 散片 = 拎起嚟嘅姿態（放大 + 傾側）；
                      砌起咗嘅一嚿 = 輕微抬起，讀起來像一整塊而唔係一堆碎片。 */
@@ -544,9 +585,20 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
           </div>
         </div>
 
+        {/* 睇返完整幅相嗰陣，下面淨係一粒重玩。 */}
+        {reviewing && (
+          <div className="game-foot">
+            <div className="tool-dock">
+              <button type="button" className="primary-btn" onClick={startPlaying}>
+                {t('game.replay')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 提示用晒先出現。平時完全唔 render，唔好長期霸住棋盤嘅高度 ——
             undo / hint / peek 喺頂欄，重新開始喺進度列。 */}
-        {hintsLeft <= 0 && (
+        {!reviewing && hintsLeft <= 0 && (
           <div className="game-foot">
             <div className="tool-dock">
               <button className="tool-btn" onClick={handleEarnHint}>
@@ -561,7 +613,7 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
       {/* 廣告版位：遊戲畫面底部橫幅 */}
       <AdSlot id="game-bottom-banner" format="banner" label={t('ads.bannerSlot')} />
 
-      {isDevBuild() && !won && (
+      {isDevBuild() && !won && !reviewing && (
         <button type="button" className="dev-btn dev-solve" onClick={devSolve}>
           DEV 即刻過關
         </button>

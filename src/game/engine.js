@@ -130,6 +130,12 @@ export function bondCountsByPiece(board) {
    盤面操作
    --------------------------------------------------------------------------- */
 
+/** 已經砌好嘅盤面（identity）。完成過嘅關卡再入去係睇返完整幅相，唔重新打亂。 */
+export function solvedBoard(size) {
+  const cells = Array.from({ length: size * size }, (_, i) => i);
+  return { size, cells, placed: computePlaced(cells) };
+}
+
 export function generateBoard(size) {
   const total = size * size;
   const ids = Array.from({ length: total }, (_, i) => i);
