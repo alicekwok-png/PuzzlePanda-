@@ -161,7 +161,11 @@ function LevelPath({ chapter, progress, onSelectChapter, onSelectLevel, onBack }
         </span>
       </div>
 
-      <div className="level-map">
+      {/* 每章一張主題底圖。scripts/prepare_photos.py --map 出圖。 */}
+      <div
+        className="level-map"
+        style={{ '--map-bg': `url('/textures/map-${chapter.key}.webp')` }}
+      >
         {/* 節點同條路都擺喺呢個內縮框入面。唔內縮嘅話，第 1 關上面隻熊貓
             公仔同第 5 關下面個關數牌會俾面板嘅 overflow:hidden 裁走。 */}
         <div className="level-map-inner">

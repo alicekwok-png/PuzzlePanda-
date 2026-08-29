@@ -7,6 +7,12 @@
     # 把 public/images/chapters/ 入面剩低嘅 .jpg 全部轉成 WebP
     python scripts/prepare_photos.py --convert-all
 
+    # 裝一張章節主題背景落選關地圖（會自動裁直度、模糊、壓暗）
+    python scripts/prepare_photos.py --map ch02 "熊貓主題底.png"
+
+    # 用每章第 1 關嘅相整一批暫代地圖背景
+    python scripts/prepare_photos.py --seed-maps
+
 輸出： public/images/chapters/<chapterKey>-<levelInChapter>.webp
 
 ── 點解 992×1586 ──────────────────────────────────────────────────
@@ -106,10 +112,67 @@ def convert_all():
           f'{total_after/1024/1024:.1f} MB（慳 {100 - total_after/total_before*100:.0f}%）')
 
 
+# ---------------------------------------------------------------------------
+# 選關地圖嘅章節主題背景
+# ---------------------------------------------------------------------------
+MAP_SIZE = (800, 1400)     # 直度。地圖面板嘅比例會隨機型變，所以用 cover 裁
+MAP_QUALITY = 78
+
+
+def install_map(src_path, chapter_key):
+    """裝一張章節主題背景落選關地圖。
+
+    ⚠️ 一定要壓暗同模糊：地圖上面有五個圓形關卡縮圖、虛線路徑同關數牌，
+    背景太清晰或者太光，嗰啲嘢就會沉晒落去睇唔到。呢度做嘅處理同 CSS 上面
+    嗰層深色罩係疊加嘅 —— 兩者一齊先夠。
+    """
+    from PIL import ImageEnhance, ImageFilter
+
+    im = Image.open(src_path).convert('RGB')
+    w, h = im.size
+    target = MAP_SIZE[0] / MAP_SIZE[1]
+    if w / h > target:
+        nw = round(h * target)
+        im = im.crop(((w - nw) // 2, 0, (w - nw) // 2 + nw, h))
+    else:
+        nh = round(w / target)
+        im = im.crop((0, (h - nh) // 2, w, (h - nh) // 2 + nh))
+    im = im.resize(MAP_SIZE, Image.LANCZOS)
+    im = im.filter(ImageFilter.GaussianBlur(9))
+    im = ImageEnhance.Brightness(im).enhance(0.5)
+    im = ImageEnhance.Color(im).enhance(1.15)
+
+    out_dir = os.path.join(ROOT, 'public', 'textures')
+    os.makedirs(out_dir, exist_ok=True)
+    dst = os.path.join(out_dir, f'map-{chapter_key}.webp')
+    im.save(dst, 'WEBP', quality=MAP_QUALITY, method=6)
+    print(f'map-{chapter_key}.webp  {MAP_SIZE[0]}×{MAP_SIZE[1]}  '
+          f'{os.path.getsize(dst) / 1024:.0f} KB')
+
+
+def seed_maps_from_levels():
+    """由每章第 1 關嘅主題相整一批暫代背景，等功能即刻行到。
+    設計交正式圖之後同名覆蓋就得。"""
+    total = 0
+    for chapter in range(1, 11):
+        key = f'ch{chapter:02d}'
+        src = os.path.join(DST, f'{key}-1.webp')
+        if not os.path.exists(src):
+            print(f'⚠️  缺檔：{src}')
+            continue
+        install_map(src, key)
+        total += os.path.getsize(os.path.join(ROOT, 'public', 'textures', f'map-{key}.webp'))
+    print(f'\n合計 {total / 1024 / 1024:.1f} MB')
+
+
 def main():
     args = sys.argv[1:]
     if args == ['--convert-all']:
         convert_all()
+    elif args == ['--seed-maps']:
+        seed_maps_from_levels()
+    elif len(args) == 3 and args[0] == '--map':
+        install_map(args[2], args[1])
     elif len(args) == 2:
         install(args[0], int(args[1]))
     else:
