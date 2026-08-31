@@ -121,6 +121,17 @@ html, body {
   background: var(--bg);
   overscroll-behavior: none;
 
+  /* ⚠️ 成個 document 一定唔可以捲。
+     用戶報過「走咗位」：iOS Safari 開咗 Google 翻譯，頂部多咗一條翻譯
+     橫額，可視高度就細過 100svh（svh 唔計呢種額外 chrome）。頁面即刻
+     變成捲得動，一碌低就切走首頁頂部 —— 設定齒輪完全唔見，貼紙簿同每
+     日兩個入口淨返下半截。呢啲入口係 position: absolute 貼喺 .screen
+     上面，所以會跟住捲走。
+
+     真正要捲嘅地方（章節格、設定內文、彈窗）全部各自有 overflow-y:
+     auto，內部捲，所以鎖死外層冇代價。 */
+  overflow: hidden;
+
   /* ⚠️ iOS 長按任何圖都會彈出系統選單（「將圖片儲存到…／複製圖片／
      開啟圖片／用 Google 搜尋圖片」）。拼圖塊同睇圖都係用
      background-image，所以一長按就中招，兩個後果都好嚴重：
@@ -142,7 +153,10 @@ img {
 }
 
 #root {
-  min-height: 100svh;
+  /* 見 services/viewportHeight.js —— --app-h 係真正睇得到嘅高度，
+     100svh 只係 JS 未行到嗰一剎嘅 fallback。 */
+  height: var(--app-h, 100svh);
+  min-height: var(--app-h, 100svh);
   display: flex;
   flex-direction: column;
 }
@@ -169,7 +183,12 @@ button:focus-visible,
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  height: var(--app-h, 100svh);
+  min-height: var(--app-h, 100svh);
+  /* ⚠️ 一定要係實高度唔可以淨係 min-height：min-height 之下 .screen 會
+     跟住內容長高，入面 flex:1 + overflow-y: auto 嗰啲區域（章節格、設定
+     內文）就永遠捲唔起上嚟，變成推長成份 document。而家 document 鎖死
+     咗唔捲得，嗰啲內容就會掂唔到。 */
   padding-top: var(--safe-top);
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);
@@ -1001,7 +1020,7 @@ button:focus-visible,
   /* .board-sparkles 用 inset 定位，要有呢個先貼得正 */
   position: relative;
   width: 100%;
-  max-width: min(100%, calc((100svh - var(--chrome-h)) * 0.625));
+  max-width: min(100%, calc((var(--app-h, 100svh) - var(--chrome-h)) * 0.625));
   padding: 5px;
   border-radius: 14px;
   background: var(--surface);
@@ -1026,7 +1045,7 @@ button:focus-visible,
    嘅話，棋盤會照舊咁高，將底下嘅廣告條頂到出畫面外（.screen 係
    overflow:hidden，廣告會直接唔見咗）。 */
 .game-body.has-dock .board-mat {
-  max-width: min(100%, calc((100svh - var(--chrome-h) - 47px) * 0.625));
+  max-width: min(100%, calc((var(--app-h, 100svh) - var(--chrome-h) - 47px) * 0.625));
 }
 
 /* ---------- 拼圖塊 ----------
@@ -2075,7 +2094,7 @@ button:focus-visible,
    有冇爆出畫面。 */
 .modal-photo-stack {
   position: relative;
-  width: min(100%, calc((100svh - 296px) * 0.625));
+  width: min(100%, calc((var(--app-h, 100svh) - 296px) * 0.625));
   margin: 0 auto 12px;
 }
 
@@ -2805,11 +2824,11 @@ button:focus-visible,
      ⚠️ 呢個數同上面嘅 --chrome-h 要一齊維護 —— 掣放大同進度條搬出嚟
      自己一行之後兩個都大咗，漏改就會頂到廣告條出畫面外。
      5:8 直向棋盤喺橫向手機上本來就好細 —— 見 README 嘅鎖直向建議。 */
-  .board-mat { max-width: min(100%, calc((100svh - 188px) * 0.625)); }
+  .board-mat { max-width: min(100%, calc((var(--app-h, 100svh) - 188px) * 0.625)); }
 
   .game-body.has-dock .board-mat {
     /* 橫向嗰陣工具列係擺喺右邊，唔食高度，所以唔使再扣 */
-    max-width: min(100%, calc((100svh - 188px) * 0.625));
+    max-width: min(100%, calc((var(--app-h, 100svh) - 188px) * 0.625));
   }
 
   .game-body .game-foot { width: 132px; flex: none; justify-content: center; }
