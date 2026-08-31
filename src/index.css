@@ -199,6 +199,43 @@ button:focus-visible,
   background: radial-gradient(ellipse at 50% 40%, transparent 18%, rgba(15, 18, 38, 0.9) 76%);
 }
 
+/* ---------- 公司 splash（de stijl）---------- */
+/* ⚠️ 白底係指定嘅，唔跟深色主題行 —— 呢個係公司識別，兩個主題都一樣白。
+   所以呢度直接寫死 #fff，唔用 token。 */
+.company-splash {
+  padding: 0;
+  background: #fff;
+  align-items: center;
+  justify-content: center;
+  /* 淡出去開場片。時間要同 CompanySplash.jsx 嘅 FADE_MS 一樣。 */
+  transition: opacity 220ms ease-out;
+}
+
+.company-splash.is-leaving {
+  opacity: 0;
+}
+
+/* ⚠️ 一定要關 .screen::before —— 嗰個偽元素有層暖橙光暈同斜格紋，而佢
+   雖然係 z-index: -2，但負 z-index 嘅仔仍然畫喺元素自己個底色之上，所以
+   會蓋住我哋隻白，個 splash 上半會泛橙。公司底色要純白。 */
+.company-splash::before {
+  display: none;
+}
+
+.company-splash-logo {
+  /* 兩邊各留一成幾，細機都唔會頂到邊。logo 本身好扁，所以再夾一個高度
+     上限，橫向嗰陣先唔會撐到成個畫面。
+     ⚠️ 高度上限要用 svh 唔可以用 % —— 呢個 flex 容器嘅高度係由 min-height
+     嚟，唔算 definite，百分比 max-height 會當冇寫，橫向嗰陣個 logo 就會
+     食咗成八成螢幕高。 */
+  width: min(72%, 520px);
+  max-height: 34svh;
+  object-fit: contain;
+  /* 開場一秒都唔想俾人長撳彈選單／揀到張圖 */
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 /* ---------- 開場動畫 ---------- */
 .intro-screen {
   padding: 0;

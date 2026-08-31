@@ -12,6 +12,9 @@
     # 遊戲頂欄「長按預覽原圖」嘅放大鏡
     python scripts/prepare_icons.py peek "magnifier.png"
 
+    # 公司 splash 嘅 de stijl logo（唔裁主體，見下面 build_logo）
+    python scripts/prepare_icons.py splash-logo "Logo去背.PNG"
+
     # 返回／離開
     python scripts/prepare_icons.py back "back-arrow.png"
 
@@ -71,6 +74,31 @@ def crop_main_shape(im):
     return to_square(im.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)))
 
 
+def build_logo(src_path, out_name, width=1200):
+    """
+    公司 logo：淨係裁走四周嘅透明邊，唔做「淨主體」裁。
+
+    ⚠️ 唔可以用 crop_main_shape —— 個 logo 由幾嚿唔相連嘅嘢砌成（左邊嘅
+    幾何標記、de stijl 字、下面嘅英文行、右邊嘅中文），flood fill 淨係會
+    揀到其中一嚿，其餘全部被裁走。呢度要嘅係成個 logo，唔係最大嗰嚿。
+
+    亦都唔補做正方形 —— logo 係扁嘅，補成正方形之後喺 splash 度要靠
+    max-width 再縮一次，白白蝕咗解像度。
+    """
+    im = Image.open(src_path).convert('RGBA')
+    box = im.getchannel('A').getbbox()
+    if box is None:
+        raise SystemExit(f'{src_path} 成張都係透明嘅')
+    out = im.crop(box)
+    height = round(out.height * width / out.width)
+    out = out.resize((width, height), Image.LANCZOS)
+    os.makedirs(DST, exist_ok=True)
+    dst = os.path.join(DST, out_name)
+    out.save(dst, 'WEBP', quality=QUALITY, method=6)
+    print(f'{out_name}  {im.size[0]}×{im.size[1]} → {width}×{height}  '
+          f'{os.path.getsize(dst) / 1024:.0f} KB')
+
+
 def build(src_path, out_name, size):
     im = Image.open(src_path).convert('RGBA')
     if im.getchannel('A').histogram()[0] == 0:
@@ -97,6 +125,8 @@ def main():
         build(args[1], 'peek.webp', SIZES['peek'])
     elif len(args) == 2 and args[0] == 'back':
         build(args[1], 'back.webp', SIZES['back'])
+    elif len(args) == 2 and args[0] == 'splash-logo':
+        build_logo(args[1], 'destijl-logo.webp')
     else:
         print(__doc__)
         return 1

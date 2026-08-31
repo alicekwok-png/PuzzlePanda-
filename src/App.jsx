@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AlbumScreen from './components/AlbumScreen';
+import CompanySplash from './components/CompanySplash';
 import DailyMission, { DailyMissionButton } from './components/DailyMission';
 import Icon from './components/Icon';
 import GameScreen from './components/GameScreen';
@@ -14,7 +15,8 @@ import { isDevBuild, isUnlockAll, setUnlockAll } from './services/devMode';
 import { feedback } from './services/feedback';
 
 export default function App() {
-  const [screen, setScreen] = useState('intro');
+  // 開 App：公司 splash → PuzzlePanda 開場動畫 → 首頁
+  const [screen, setScreen] = useState('splash');
   const [progress, setProgress] = useState(() => loadProgress());
   const [activeLevel, setActiveLevel] = useState(null);
   const [devUnlock, setDevUnlock] = useState(() => isUnlockAll());
@@ -34,7 +36,7 @@ export default function App() {
   // 首頁沒有預留高度，橫幅會蓋住「開始遊戲」按鈕，所以那裡收起。
   useEffect(() => {
     // 貼紙簿都唔預留橫幅高度 —— 嗰頁要似一本簿，唔應該有廣告條夾住。
-    if (screen === 'home' || screen === 'intro' || screen === 'album') hideBanner();
+    if (screen === 'home' || screen === 'splash' || screen === 'intro' || screen === 'album') hideBanner();
     else showBanner();
   }, [screen]);
 
@@ -68,6 +70,10 @@ export default function App() {
     refreshProgress();
     const next = LEVELS.find((l) => l.id === activeLevel.id + 1);
     if (next) setActiveLevel(next);
+  }
+
+  if (screen === 'splash') {
+    return <CompanySplash onFinish={() => setScreen('intro')} />;
   }
 
   if (screen === 'intro') {
