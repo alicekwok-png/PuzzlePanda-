@@ -226,8 +226,14 @@ button:focus-visible,
   background: #fff;
   align-items: center;
   justify-content: center;
-  /* 淡出去開場片。時間要同 CompanySplash.jsx 嘅 FADE_MS 一樣。 */
+  /* 一開波係 0，等入場果下先淡入；退場又淡走去開場片。
+     時間要同 CompanySplash.jsx 嘅 FADE_MS 一樣。 */
+  opacity: 0;
   transition: opacity 220ms ease-out;
+}
+
+.company-splash.is-visible {
+  opacity: 1;
 }
 
 .company-splash.is-leaving {
