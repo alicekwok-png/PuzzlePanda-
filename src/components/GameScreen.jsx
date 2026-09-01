@@ -18,6 +18,7 @@ import { useT } from '../i18n/context';
 import { hideBanner, showBanner, showInterstitialOnLevelWin, showRewarded } from '../services/ads';
 import { isDevBuild } from '../services/devMode';
 import { feedback, preloadSfx } from '../services/feedback';
+import { protectPeek, unprotectPeek } from '../services/privacyScreen';
 import { CHAPTERS, LEVELS } from '../game/levels';
 import AdSlot from './AdSlot';
 import AlbumScreen from './AlbumScreen';
@@ -93,6 +94,11 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
   const passedDeadzoneRef = useRef(false);
   const feedbackTimerRef = useRef(null);
   const justBondedTimerRef = useRef(null);
+  /* handlePeekEnd 可能俾一個原生 screenshotTaken 事件喺舊 render 嘅
+     closure 度叫返轉頭（protectPeek 註冊嗰陣捉住嗰一刻嘅 handlePeekEnd）。
+     用 ref 存實際狀態，唔靠 closure 入面嗰個 peeking，先唔會漏判「其實
+     已經收咗」。 */
+  const peekingRef = useRef(false);
 
   // 橫幅由 App 依畫面統一開關（遊戲頁與關卡頁都已用 AdSlot 預留高度），
   // 這裡只負責清掉自己的計時器。
@@ -103,6 +109,10 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
       clearTimeout(justBondedTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    peekingRef.current = peeking;
+  }, [peeking]);
 
   /** 由「睇返完整幅相」轉去真係玩。呢一刻先攞 bonus hint。 */
   function startPlaying() {
@@ -348,12 +358,20 @@ export default function GameScreen({ level, totalLevels, onExit, onNextLevel }) 
     setPeeksLeft((n) => n - 1);
     setPeeking(true);
     feedback.peekOpen();
+    /* Android 真擋截圖；iOS 擋唔到，淨係聽到截咗先事後收返個 peek
+       加罰多扣一次，當懲罰唔係防範（平台硬性限制，見 privacyScreen.js）。 */
+    protectPeek(() => handlePeekEnd({ penalize: true }));
   }
 
-  function handlePeekEnd() {
-    if (!peeking) return;
+  function handlePeekEnd({ penalize = false } = {}) {
+    if (!peekingRef.current) return;
     setPeeking(false);
     feedback.peekClose();
+    unprotectPeek();
+    if (penalize) {
+      setPeeksLeft((n) => Math.max(0, n - 1));
+      showFeedback('game.peekScreenshotWarn');
+    }
   }
 
   /* 開發者用：一鍵砌好，用嚟睇過關特效同結算畫面，唔使真係玩完一關。

@@ -52,6 +52,7 @@
   "game.progressAria": "拼图进度",
   "game.peekAria": "长按预览原图",
   "game.peekHint": "松开手指返回游戏",
+  "game.peekScreenshotWarn": "检测到截图，预览已中断并多扣一次机会",
   "game.comboTier1": "Nice!",
   "game.comboTier2": "Great!",
   "game.comboTier3": "Excellent!",

@@ -52,6 +52,7 @@
   "game.progressAria": "Puzzle progress",
   "game.peekAria": "Hold to preview the full picture",
   "game.peekHint": "Release to return to the game",
+  "game.peekScreenshotWarn": "Screenshot detected — preview closed early and an extra peek was deducted",
   "game.comboTier1": "Nice!",
   "game.comboTier2": "Great!",
   "game.comboTier3": "Excellent!",
