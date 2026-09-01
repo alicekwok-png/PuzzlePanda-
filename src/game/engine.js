@@ -141,7 +141,10 @@ export function generateBoard(size) {
   const ids = Array.from({ length: total }, (_, i) => i);
   let cells = shuffle(ids);
   let guard = 0;
-  while (isIdentity(cells) && guard < 5) {
+  /* 純隨機洗牌偶爾會巧合咁令某兩格喺打亂完之後仍然係原圖鄰居 ——
+     玩家一入關就見到有兩三塊「未撳過已經黐埋」，睇落好似隻 game 有
+     bug。入局嗰一刻要保證全部散片、一條邊都未接合。 */
+  while ((isIdentity(cells) || bondProgress({ cells, size }).bonded > 0) && guard < 200) {
     cells = shuffle(ids);
     guard++;
   }
