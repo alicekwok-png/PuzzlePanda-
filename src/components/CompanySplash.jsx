@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 /* ==========================================================================
    公司 splash（de stijl）
    --------------------------------------------------------------------------
-   開 App 見到嘅第一個畫面：白底、logo 靜態擺中間、約一秒，跟住先入
+   開 App 見到嘅第一個畫面：白底、logo 靜態擺中間、約兩秒，跟住先入
    PuzzlePanda 嘅開場動畫。
 
    ⚠️ 刻意唔做動畫、唔畀撳走：
@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from 'react';
    ========================================================================== */
 
 /** 靜態停留幾耐（頭尾嘅 fade 都唔計落去）。 */
-const HOLD_MS = 1000;
+const HOLD_MS = 2000;
 /** 入場／退場 fade 各自幾耐。要同 CSS 入面 .company-splash 嘅 transition 一樣。 */
 const FADE_MS = 220;
 
